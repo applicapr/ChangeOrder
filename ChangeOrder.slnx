@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="ChangeOrder.Data/ChangeOrder.Data.csproj" />
+    <Project Path="src/ChangeOrder.Business/ChangeOrder.Business.csproj" />
+    <Project Path="src/ChangeOrder.Domain/ChangeOrder.Domain.csproj" />
+    <Project Path="src/ChangeOrder.Host/ChangeOrder.Host.csproj" />
+    <Project Path="src/ChangeOrder.Presentation/ChangeOrder.Presentation.csproj" />
+  </Folder>
+</Solution>

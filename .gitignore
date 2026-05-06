@@ -52,3 +52,18 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# appsettings locales — NUNCA subir credenciales
+appsettings.Development.json
+appsettings.Local.json
+
+# Logs de Serilog
+logs/
+*.txt
