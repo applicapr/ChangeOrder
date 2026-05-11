@@ -1,7 +1,7 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="ChangeOrder.Data/ChangeOrder.Data.csproj" />
     <Project Path="src/ChangeOrder.Business/ChangeOrder.Business.csproj" />
+    <Project Path="src/ChangeOrder.Data/ChangeOrder.Data.csproj" Id="c99c3aa5-0228-48f1-a479-aa5bb5a2f914" />
     <Project Path="src/ChangeOrder.Domain/ChangeOrder.Domain.csproj" />
     <Project Path="src/ChangeOrder.Host/ChangeOrder.Host.csproj" />
     <Project Path="src/ChangeOrder.Presentation/ChangeOrder.Presentation.csproj" />

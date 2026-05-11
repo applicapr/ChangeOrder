@@ -14,4 +14,9 @@
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ChangeOrder.Data\ChangeOrder.Data.csproj" />
+    <ProjectReference Include="..\ChangeOrder.Presentation\ChangeOrder.Presentation.csproj" />
+  </ItemGroup>
+
 </Project>
