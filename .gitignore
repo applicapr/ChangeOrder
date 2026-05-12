@@ -52,3 +52,13 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Local AI assistant files (per-developer, no commit)
+CLAUDE.md
+.engram/
+
+# IDE / Editor local files (per-developer, no commit)
+.idea/
+
+# macOS Finder metadata
+.DS_Store
