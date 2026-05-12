@@ -32,6 +32,7 @@ This document describes the persisted entities, their attributes, relationships,
 | `UpdatedAt` | `DateTime?` (UTC) | nullable, set by `AuditInterceptor` | AS-001 |
 | `IsDeleted` | `bool` | NOT NULL DEFAULT 0, indexed | AS-001, AS-004 |
 | `DeletedAt` | `DateTime?` (UTC) | nullable, set by `AuditInterceptor` | AS-001, AS-004 |
+| `RowVersion` | `byte[]` | `rowversion` SQL type (auto-managed by SQL Server), used by EF Core as concurrency token via `IsRowVersion()` | FR-013 |
 
 **Implements**: `ISoftDeletable`, `IAuditable`.
 **Constructor**: explicit (no parameterless). EF Core 10 uses a backing-field constructor for materialization.
@@ -238,6 +239,7 @@ Enforced in the `AdvanceWorkflowHandler` via a small state machine table.
 | `PUT` only allowed in `Draft` | `UpdateOrderHandler` | `DomainErrors.Order.EditAfterDraft` → HTTP 409 |
 | `Idempotency-Key` payload divergence | `IdempotencyService` | `DomainErrors.Idempotency.PayloadDivergence` → HTTP 422 |
 | Soft delete cannot resurrect | `Delete` is final via interceptor | no API path to undelete |
+| `RowVersion` mismatch on `PUT`/`PATCH` | EF Core throws `DbUpdateConcurrencyException`; caught in handler | `DomainErrors.Order.ConcurrencyConflict` → HTTP 409 |
 
 ---
 

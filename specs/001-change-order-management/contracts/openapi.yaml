@@ -139,7 +139,10 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
-          description: Conflict — the order has left Draft; use the workflow endpoints
+          description: |
+            Conflict. Two cases:
+            (a) `order.edit_after_draft` — the order has left Draft; use the workflow endpoints (FR-006).
+            (b) `order.concurrency_conflict` — the submitted `rowVersion` does not match the persisted token (FR-013); refetch via GET and retry.
           content:
             application/json:
               schema:
@@ -305,9 +308,16 @@ components:
         requiredAction:           { type: string, minLength: 1, maxLength: 1000 }
         requester:                { $ref: "#/components/schemas/RequesterInfo" }
     UpdateOrderRequest:
-      description: PUT body. Only allowed while order is in Draft (FR-006).
+      description: PUT body. Only allowed while order is in Draft (FR-006). Must include the `rowVersion` previously received from a GET to enable optimistic concurrency (FR-013).
       allOf:
         - $ref: "#/components/schemas/CreateOrderRequest"
+        - type: object
+          required: [rowVersion]
+          properties:
+            rowVersion:
+              type: string
+              format: byte
+              description: Base64-encoded concurrency token (SQL Server `rowversion`). The same token received in the last GET; mismatched tokens cause HTTP 409 Conflict.
     ApprovalVerdictRequest:
       type: object
       required: [verdict]
@@ -346,6 +356,7 @@ components:
         postDeployScreenshotPath:  { type: string, nullable: true }
         createdAt:                 { type: string, format: date-time }
         updatedAt:                 { type: string, format: date-time, nullable: true }
+        rowVersion:                { type: string, format: byte, description: "Base64-encoded concurrency token (FR-013). Must be echoed back in PUT/PATCH requests." }
     PagedOrderResponse:
       type: object
       required: [items, totalCount, page, pageSize]

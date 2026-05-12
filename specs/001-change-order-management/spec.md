@@ -73,7 +73,7 @@ Operators need to browse the catalog of change orders, look up a specific one by
 - **Idempotency-Key collision across orders**: two genuinely different requests submitted with the same `Idempotency-Key` (e.g., a buggy client reusing the key) must NOT be silently merged; the system must detect divergent payloads and reject the second submission with a clear error.
 - **Rate limit exhaustion**: when a single client breaches the 100 req/min ceiling, the 101st request returns HTTP 429 with a clear retry-after signal; in-flight legitimate requests are NOT terminated mid-flight.
 - **Re-submission of a rejected approval**: after an approver marks `Rejected`, the spec must define whether the order is reset to `Draft` for correction or remains in `PendingApproval` awaiting an explicit "reopen" action. (Decision documented in Assumptions.)
-- **Concurrent modification**: two operators editing the same order simultaneously — the second writer MUST see a conflict signal, not a silent overwrite.
+- **Concurrent modification**: two operators editing the same order simultaneously — the second writer MUST see a conflict signal (HTTP 409), not a silent overwrite. Mechanism: optimistic concurrency token `RowVersion` (see FR-013).
 
 ## Requirements *(mandatory)*
 
@@ -91,6 +91,7 @@ Operators need to browse the catalog of change orders, look up a specific one by
 - **FR-010**: System MUST expose a health-check endpoint that verifies database connectivity and reports a clear pass/fail signal usable by infrastructure monitoring.
 - **FR-011**: System MUST log every operation in a structured form suitable for audit replay, and MUST NOT log personally identifying or sensitive content in plaintext.
 - **FR-012**: System MUST persist `Idempotency-Key` values in a dedicated database table (same SQL Server instance as the orders) with a retention window of 24 hours. Within the retention window, a repeated `POST` carrying the same key returns the previously created order without duplicating it; outside the window, the key is treated as fresh. A scheduled cleanup job MUST evict entries older than the retention window.
+- **FR-013**: System MUST detect concurrent modifications to the same order via an optimistic concurrency token (`RowVersion`). Every read response MUST include the current token. **Scope of enforcement**: only `PUT /api/v1/change-orders/{id}` requires the client to echo the token — when the submitted token does not match the persisted one the system MUST reject the write with **HTTP 409 Conflict** (`order.concurrency_conflict`). The workflow-advancement endpoints (`PUT /{id}/approvals/{level}` and `PATCH /{id}/dates`) are **exempt** because each writes to an independent slot of the aggregate (one approval level / one milestone date); requiring a token on those endpoints would force the four approvers to act sequentially, which contradicts the design intent of an independent four-level approval chain. (Added during `/speckit-analyze` 2026-05-12, finding F2; scope clarified in finding NEW1.)
 
 ### Audit & Soft-Delete Impact *(mandatory when feature touches persisted entities)*
 

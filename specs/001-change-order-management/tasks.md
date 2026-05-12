@@ -56,7 +56,7 @@ Onion layout fixed by `.specify/memory/constitution.md` v1.0.0:
 
 - [ ] T014 [P] Add `src/ChangeOrder.Domain/Errors/Error.cs` — sealed record `Error(string Code, string Message)`
 - [ ] T015 [P] Add `src/ChangeOrder.Domain/Errors/Result.cs` — sealed generic record `Result<TValue, TError>` with `Success`/`Failure` factories per research.md R-5
-- [ ] T016 Add `src/ChangeOrder.Domain/Errors/DomainErrors.cs` — static class with nested `Order` and `Idempotency` classes producing every error code referenced in `openapi.yaml` (`order.not_found`, `order.duplicate_number`, `order.invalid_transition`, `order.edit_after_draft`, `order.daily_sequence_exhausted`, `idempotency.payload_divergence`)
+- [ ] T016 Add `src/ChangeOrder.Domain/Errors/DomainErrors.cs` — static class with nested `Order` and `Idempotency` classes producing every error code referenced in `openapi.yaml` (`order.not_found`, `order.duplicate_number`, `order.invalid_transition`, `order.edit_after_draft`, `order.daily_sequence_exhausted`, `order.concurrency_conflict`, `idempotency.payload_divergence`)
 - [ ] T017 [P] Add `src/ChangeOrder.Domain/Enums/OrderStatus.cs` — values: `Draft`, `PendingApproval`, `Approved`, `InProgress`, `Deployed`, `Cancelled`
 - [ ] T018 [P] Add `src/ChangeOrder.Domain/Enums/ApprovalStatus.cs` — values: `Pending`, `Approved`, `Rejected`
 - [ ] T019 [P] Add `src/ChangeOrder.Domain/Abstractions/ISoftDeletable.cs` — `bool IsDeleted` + `DateTime? DeletedAt`
@@ -65,7 +65,7 @@ Onion layout fixed by `.specify/memory/constitution.md` v1.0.0:
 - [ ] T022 [P] Add `src/ChangeOrder.Domain/ValueObjects/OrderNumber.cs` — sealed record, private ctor, `Create(DateOnly date, int sequence)` factory returning `Result<OrderNumber, Error>`, format `yyyyMMdd-##`, validates `sequence ∈ [1..99]`
 - [ ] T023 [P] Add `src/ChangeOrder.Domain/ValueObjects/RequesterInfo.cs` — sealed record with `Name`, `Position`, `Department`, `Email`
 - [ ] T024 [P] Add `src/ChangeOrder.Domain/ValueObjects/ApprovalChain.cs` — sealed record with the four approval slots, helper `AllApproved()`
-- [ ] T025 Add `src/ChangeOrder.Domain/Entities/ChangeOrder.cs` — aggregate root implementing `ISoftDeletable` + `IAuditable`, encapsulating OrderNumber + Requester + ApprovalChain + Status + milestone dates, with state-transition method(s) returning `Result<TVoid, Error>` per data-model.md §8
+- [ ] T025 Add `src/ChangeOrder.Domain/Entities/ChangeOrder.cs` — aggregate root implementing `ISoftDeletable` + `IAuditable`, encapsulating OrderNumber + Requester + ApprovalChain + Status + milestone dates, exposing a `RowVersion` `byte[]` property for optimistic concurrency (FR-013), with state-transition method(s) returning `Result<TVoid, Error>` per data-model.md §8
 - [ ] T026 [P] Add `src/ChangeOrder.Domain/Entities/IdempotencyKey.cs` — entity with `Key`, `OrderId`, `RequestHash`, `CreatedAt` (NOT auditable, NOT soft-deletable; documented in data-model.md §6)
 - [ ] T027 Add `src/ChangeOrder.Domain/Abstractions/IChangeOrderRepository.cs` — methods: `GetByIdAsync`, `ListAsync(PagedRequest)`, `AddAsync`, `GetNextSequenceForDateAsync(DateOnly)`, `FindIdempotencyAsync(string key)`
 - [ ] T028 [P] Add `src/ChangeOrder.Domain/Extensions/ServiceCollectionExtensions.cs` — `AddDomain(this IServiceCollection)` stub (Domain has no DI today, kept for symmetry)
@@ -73,7 +73,7 @@ Onion layout fixed by `.specify/memory/constitution.md` v1.0.0:
 ### Data plumbing
 
 - [ ] T029 Add `src/ChangeOrder.Data/Persistence/ApplicationDbContext.cs` — `DbSet<ChangeOrder>`, `DbSet<IdempotencyKey>`, configured with the global query filter for soft delete
-- [ ] T030 [P] Add `src/ChangeOrder.Data/Configurations/ChangeOrderConfiguration.cs` — table `dbo.ChangeOrders`, all columns per data-model.md §1, UNIQUE INDEX `IX_ChangeOrders_OrderNumber`, non-clustered indexes on `RequestDate`, `Status`, `IsDeleted`, OwnsOne mappings for the three value objects
+- [ ] T030 [P] Add `src/ChangeOrder.Data/Configurations/ChangeOrderConfiguration.cs` — table `dbo.ChangeOrders`, all columns per data-model.md §1, UNIQUE INDEX `IX_ChangeOrders_OrderNumber`, non-clustered indexes on `RequestDate`, `Status`, `IsDeleted`, OwnsOne mappings for the three value objects, `Property(e => e.RowVersion).IsRowVersion()` for FR-013 concurrency token
 - [ ] T031 [P] Add `src/ChangeOrder.Data/Configurations/IdempotencyKeyConfiguration.cs` — table `dbo.IdempotencyKeys`, PK on `Key`, FK to `ChangeOrders.Id` with `Restrict` delete behavior, index on `CreatedAt`
 - [ ] T032 Add `src/ChangeOrder.Data/Interceptors/AuditInterceptor.cs` — implements `ISaveChangesInterceptor` per research.md R-4, single writer of audit/soft-delete columns
 - [ ] T033 Add `src/ChangeOrder.Data/Repositories/ChangeOrderRepository.cs` — sealed class implementing `IChangeOrderRepository`. The `GetNextSequenceForDateAsync` method uses the `UPDLOCK + HOLDLOCK` raw-SQL strategy from research.md R-1; ALL `await`s use `.ConfigureAwait(false)`
@@ -124,7 +124,7 @@ Onion layout fixed by `.specify/memory/constitution.md` v1.0.0:
 - [ ] T053 [US1] Add `src/ChangeOrder.Business/Commands/CreateOrder/CreateOrderValidator.cs` — `.NET 10 AddValidation()` rules for required text fields, length bounds, email shape (per data-model.md §3)
 - [ ] T054 [US1] Add `src/ChangeOrder.Business/Commands/CreateOrder/CreateOrderHandler.cs` — sealed `ICommandHandler<CreateOrderCommand, Result<OrderResponse, Error>>`. Flow: 1) IdempotencyService lookup; 2) on Fresh, ask OrderNumberGenerator for the next sequence; 3) build `ChangeOrder` entity; 4) persist within a single transaction (order + idempotency key row); 5) on UNIQUE violation, retry. `.ConfigureAwait(false)` everywhere.
 - [ ] T055 [P] [US1] Add `src/ChangeOrder.Presentation/DTOs/Requests/CreateOrderRequest.cs` — record matching `openapi.yaml` schema
-- [ ] T056 [P] [US1] Add `src/ChangeOrder.Presentation/DTOs/Responses/OrderResponse.cs` — record matching `openapi.yaml` schema
+- [ ] T056 [P] [US1] Add `src/ChangeOrder.Presentation/DTOs/Responses/OrderResponse.cs` — record matching `openapi.yaml` schema, includes `RowVersion` (base64-encoded byte[]) for FR-013
 - [ ] T057 [P] [US1] Add `src/ChangeOrder.Presentation/Mappers/OrderMapper.cs` — static extension class with `ToResponse(this ChangeOrder)` and `ToEntity(this CreateOrderRequest, OrderNumber)`
 - [ ] T058 [US1] In `src/ChangeOrder.Presentation/Extensions/EndpointRouteBuilderExtensions.cs`, implement the `POST /api/v1/change-orders` endpoint: reads `Idempotency-Key` header, invokes the command handler, returns `TypedResults.Created(...)` on 201, `TypedResults.Ok(...)` on idempotent replay, `TypedResults.UnprocessableEntity(...)` on payload divergence, validation errors via `ProblemDetailsFactory`
 
@@ -176,11 +176,11 @@ Onion layout fixed by `.specify/memory/constitution.md` v1.0.0:
 - [ ] T073 [P] [US3] Add `src/ChangeOrder.Business/Queries/GetOrderById/GetOrderByIdHandler.cs` — returns `Result<OrderResponse, Error>`; 404 emits `DomainErrors.Order.NotFound`
 - [ ] T074 [P] [US3] Add `src/ChangeOrder.Business/Queries/GetAllOrders/GetAllOrdersQuery.cs` (extends `PagedRequest`)
 - [ ] T075 [US3] Add `src/ChangeOrder.Business/Queries/GetAllOrders/GetAllOrdersHandler.cs` — returns `PagedResponse<OrderResponse>`; validates `Page>=1`, `PageSize ∈ [1..50]`, exposes `TotalCount` from `CountAsync`
-- [ ] T076 [P] [US3] Add `src/ChangeOrder.Business/Commands/UpdateOrder/UpdateOrderCommand.cs`
-- [ ] T077 [US3] Add `src/ChangeOrder.Business/Commands/UpdateOrder/UpdateOrderHandler.cs` — only accepts mutation when `OrderStatus == Draft`; otherwise emits `DomainErrors.Order.EditAfterDraft` (HTTP 409) per the C-1 clarification
+- [ ] T076 [P] [US3] Add `src/ChangeOrder.Business/Commands/UpdateOrder/UpdateOrderCommand.cs` — includes `RowVersion` (byte[]) for FR-013
+- [ ] T077 [US3] Add `src/ChangeOrder.Business/Commands/UpdateOrder/UpdateOrderHandler.cs` — only accepts mutation when `OrderStatus == Draft`; otherwise emits `DomainErrors.Order.EditAfterDraft` (HTTP 409) per the C-1 clarification. Sets the entity's `RowVersion` from the command before `SaveChangesAsync`; catches `DbUpdateConcurrencyException` and returns `DomainErrors.Order.ConcurrencyConflict` (HTTP 409) per FR-013
 - [ ] T078 [P] [US3] Add `src/ChangeOrder.Business/Commands/DeleteOrder/DeleteOrderCommand.cs`
 - [ ] T079 [US3] Add `src/ChangeOrder.Business/Commands/DeleteOrder/DeleteOrderHandler.cs` — calls `Remove` on the entity; the `AuditInterceptor` converts this to a soft delete automatically (no manual flag flipping)
-- [ ] T080 [P] [US3] Add `src/ChangeOrder.Presentation/DTOs/Requests/UpdateOrderRequest.cs`
+- [ ] T080 [P] [US3] Add `src/ChangeOrder.Presentation/DTOs/Requests/UpdateOrderRequest.cs` — extends `CreateOrderRequest` shape and includes a required `RowVersion` (base64-encoded) for FR-013
 - [ ] T081 [US3] Extend `EndpointRouteBuilderExtensions.MapChangeOrderApi` with `GET /` (paged), `GET /{id}`, `PUT /{id}` (Draft-only), `DELETE /{id}`, all wired to their respective handlers and `ProblemDetailsFactory`
 
 ### Tests for User Story 3
@@ -204,6 +204,8 @@ Onion layout fixed by `.specify/memory/constitution.md` v1.0.0:
 - [ ] T089 [P] Add XML doc comments on every public endpoint and DTO so the generated OpenAPI matches `contracts/openapi.yaml`
 - [ ] T090 [P] Verify (via a CI step or pre-commit script) that no `.cs` file exceeds 500 lines (constitution Quality bar gate)
 - [ ] T091 [P] `tests/ChangeOrder.Presentation.Tests/RateLimitTests.cs` — exercises SC-005: the 101st request within a minute returns HTTP 429 within 50 ms with a `Retry-After` header
+- [ ] T091a [P] `tests/ChangeOrder.Presentation.Tests/PerformanceTests.cs` — exercises SC-002 under nominal load (≤50 concurrent users, ≤10 RPS sustained): 95% of `POST /api/v1/change-orders` complete in under 3 seconds end-to-end. Use `BenchmarkDotNet` or a hand-rolled load harness pointing at the in-process `WebApplicationFactory` host
+- [ ] T091b [P] [US3] `tests/ChangeOrder.Business.Tests/Commands/UpdateOrder/ConcurrencyTests.cs` — exercises FR-013: two `UpdateOrderHandler.HandleAsync` calls with the same starting `RowVersion`; the first succeeds, the second receives `DomainErrors.Order.ConcurrencyConflict` and HTTP 409 (verified end-to-end in a separate `Presentation.Tests` test if needed)
 - [ ] T092 [P] `tests/ChangeOrder.Presentation.Tests/HealthCheckTests.cs` — exercises SC-007: `/health` returns 200 when SQL is reachable and 503 when not (using a test double for the SQL health check)
 - [ ] T093 Update the project `README.md` quick-start section to mirror `quickstart.md`, plus a "Spec-Driven Development" paragraph referencing `specs/001-change-order-management/` and the constitution
 - [ ] T094 Run `dotnet format`, `dotnet build` (must report 0 warnings), `dotnet test` (full suite including Testcontainers); fix any drift before opening the PR
