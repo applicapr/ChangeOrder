@@ -5,6 +5,13 @@
 **Status**: Draft  
 **Input**: User description: "Sistema CRUD de Change Order Management con cadena de 4 aprobaciones, OrderNumber thread-safe yyyyMMdd-##, soft delete, auditoría, idempotencia POST, paginación y rate limiting. Detalles completos en Docs/0-Initial/spec.md y plan técnico en Docs/0-Initial/plan.md."
 
+## Clarifications
+
+### Session 2026-05-12
+
+- Q: For Fase 1, which authorization matrix does `PUT /change-orders/{id}` enforce? → A: Defer per-role matrix to Fase 2. In Fase 1, `PUT` is allowed only while the order is in `Draft`; once the order is in `PendingApproval` or later, `PUT` is rejected (HTTP 409 Conflict) — only the workflow-advancement endpoints (approval, delivery date, deploy date, post-deploy screenshot) may mutate the order.
+- Q: Where and for how long does the system persist `Idempotency-Key` values? → A: Dedicated SQL Server table (`IdempotencyKeys`) in the same database as orders. Retention window is 24 hours; entries older than that are eligible for deletion by a scheduled cleanup job. No external cache (Redis) is introduced.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Capture a change request and assign it a unique order number (Priority: P1)
@@ -77,13 +84,13 @@ Operators need to browse the catalog of change orders, look up a specific one by
 - **FR-003**: System MUST start every new order in status `Draft` and MUST enforce these state transitions only: `Draft → PendingApproval`, `PendingApproval → Approved | Cancelled`, `Approved → InProgress`, `InProgress → Deployed | Cancelled`. Any other transition MUST be rejected.
 - **FR-004**: System MUST record four independent approval verdicts (Requester, Department Head, IT Head, Programming Division), each as one of `Pending | Approved | Rejected`, and MUST refuse to mark the order `Approved` until all four are `Approved`.
 - **FR-005**: System MUST support reading the full record of any order by its identifier and MUST support listing orders with mandatory pagination: caller specifies `Page ≥ 1` and `PageSize` in `[1..50]`; response carries `Items`, `TotalCount`, `Page`, `PageSize`.
-- **FR-006**: System MUST support modifying an existing order subject to the per-state authorization matrix. [NEEDS CLARIFICATION: which fields are mutable in each state, and which actor(s) may mutate them, is not yet specified by the business]
+- **FR-006**: System MUST allow `PUT /change-orders/{id}` to modify any field of the order ONLY while the order is in `Draft`. Once the order is in `PendingApproval`, `Approved`, `InProgress`, `Deployed`, or `Cancelled`, `PUT` MUST be rejected with HTTP 409 Conflict and a descriptive error. Workflow-advancement endpoints (record approval verdict, record delivery date, record initial evaluation date, record production deploy date, attach post-deploy screenshot) are the only sanctioned ways to mutate an order past `Draft` in Fase 1. The finer-grained per-role authorization matrix is deferred to Fase 2 once identity-aware authentication is in place.
 - **FR-007**: System MUST support a "delete" operation that performs a soft delete (record marked deleted, NOT physically removed) and MUST exclude soft-deleted orders from default listings and single-id lookups.
 - **FR-008**: System MUST honor an `Idempotency-Key` header on order-creation requests so that retried submissions return the original order rather than creating duplicates.
 - **FR-009**: System MUST enforce a rate-limit ceiling of 100 requests per minute per client (fixed window) and return HTTP 429 with retry-after guidance when exceeded.
 - **FR-010**: System MUST expose a health-check endpoint that verifies database connectivity and reports a clear pass/fail signal usable by infrastructure monitoring.
 - **FR-011**: System MUST log every operation in a structured form suitable for audit replay, and MUST NOT log personally identifying or sensitive content in plaintext.
-- **FR-012**: System MUST persist `Idempotency-Key` values long enough to detect retries within a reasonable retry window. [NEEDS CLARIFICATION: the storage mechanism and retention window for idempotency keys is not yet decided — database table vs distributed cache, retention 24h vs 7d vs other]
+- **FR-012**: System MUST persist `Idempotency-Key` values in a dedicated database table (same SQL Server instance as the orders) with a retention window of 24 hours. Within the retention window, a repeated `POST` carrying the same key returns the previously created order without duplicating it; outside the window, the key is treated as fresh. A scheduled cleanup job MUST evict entries older than the retention window.
 
 ### Audit & Soft-Delete Impact *(mandatory when feature touches persisted entities)*
 

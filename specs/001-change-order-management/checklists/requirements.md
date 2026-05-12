@@ -13,8 +13,8 @@
 
 ## Requirement Completeness
 
-- [ ] **No [NEEDS CLARIFICATION] markers remain** — **2 markers intentionally retained** (within the ≤3 cap mandated by the SKILL.md, both representing genuine business gaps; see Notes)
-- [x] Requirements are testable and unambiguous (except the two explicitly flagged)
+- [x] **No [NEEDS CLARIFICATION] markers remain** — both C-1 and C-2 were resolved via `/speckit-clarify` session on 2026-05-12 (see `## Clarifications` in the spec).
+- [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic — *HTTP status codes are treated as API contract, not technology choice*
 - [x] All acceptance scenarios are defined
@@ -31,14 +31,14 @@
 
 ## Notes
 
-### Open clarifications (carry forward to `/speckit-clarify` or `/speckit-plan`)
+### Clarifications resolved (via `/speckit-clarify` on 2026-05-12)
 
-| ID | Where | Question |
-|---|---|---|
-| C-1 | FR-006 / US3 Scenario 3 | Exact per-state authorization matrix: which fields are mutable in which `OrderStatus`, and which actor(s) may mutate them. |
-| C-2 | FR-012 | Idempotency-key storage mechanism (database table vs `IDistributedCache`) and retention window (24h vs 7d vs other). |
+| ID | Where | Question | Resolution |
+|---|---|---|---|
+| C-1 | FR-006 / US3 Scenario 3 | Per-state authorization matrix for `PUT /change-orders/{id}`. | **Defer to Fase 2**. Fase 1: `PUT` allowed only in `Draft`; rejected (HTTP 409) in `PendingApproval+`. Workflow-advancement endpoints handle the rest. |
+| C-2 | FR-012 | Idempotency-key storage mechanism and retention window. | **SQL Server table `IdempotencyKeys`**, retention **24 hours**, scheduled cleanup job. No external cache. |
 
-Both gaps are genuine — they have no defensible default that wouldn't lock in a major architectural commitment prematurely. They are deliberately deferred to `/speckit-clarify` (preferred) or to the planning phase.
+No clarifications remain open.
 
 ### Deliberate exceptions to "no implementation details"
 
@@ -50,8 +50,6 @@ Both gaps are genuine — they have no defensible default that wouldn't lock in 
 
 ### Validation result
 
-**PASS** — proceed to `/speckit-clarify` (recommended, to close C-1 and C-2) before `/speckit-plan`. The two open clarifications are tracked here and in the spec itself with `[NEEDS CLARIFICATION: ...]` markers.
+**PASS** — clarifications closed, spec ready for `/speckit-plan`.
 
-If you choose to skip `/speckit-clarify` and go straight to `/speckit-plan`, expect the plan phase to either inherit both ambiguities (and surface them in the implementation plan) or to force a decision on them.
-
-Items marked incomplete with the actual checkbox `- [ ]` represent deliberate, documented exceptions, NOT spec defects. Do NOT silently flip them to passing.
+The single remaining unchecked item (`No implementation details leak into specification`) is a deliberate, documented exception, NOT a spec defect: the Audit & Soft-Delete Impact section is mandated by `.specify/memory/constitution.md` v1.0.0 Principle IV and is technical by design. Do NOT silently flip it to passing.
