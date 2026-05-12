@@ -56,6 +56,7 @@ nunit-*.xml
 # Local AI assistant files (per-developer, no commit)
 CLAUDE.md
 .engram/
+.claude/
 
 # IDE / Editor local files (per-developer, no commit)
 .idea/
