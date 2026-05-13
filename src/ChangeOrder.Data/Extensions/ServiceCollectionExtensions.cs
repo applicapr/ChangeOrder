@@ -34,6 +34,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IChangeOrderRepository, ChangeOrderRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IdempotencyKeyCleanupRepository>();
 
         return services;
     }

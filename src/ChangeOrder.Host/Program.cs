@@ -2,6 +2,7 @@ using System.Globalization;
 using ChangeOrder.Business.Extensions;
 using ChangeOrder.Data.Extensions;
 using ChangeOrder.Domain.Extensions;
+using ChangeOrder.Host.BackgroundServices;
 using ChangeOrder.Presentation.Extensions;
 using Microsoft.Extensions.Hosting;
 using Scalar.AspNetCore;
@@ -39,6 +40,11 @@ public partial class Program
                     .ReadFrom.Configuration(context.Configuration)
                     .ReadFrom.Services(services)
                     .Enrich.FromLogContext()
+                    .Enrich.WithMachineName()
+                    .Enrich.WithEnvironmentName()
+                    .Enrich.WithCorrelationId()
+                    .Enrich.WithThreadId()
+                    .Enrich.WithProperty("Application", "ChangeOrder.Api")
                     .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
                     .WriteTo.File(
                         path: "logs/changeorder-.log",
@@ -46,11 +52,18 @@ public partial class Program
                         rollingInterval: RollingInterval.Day,
                         retainedFileCountLimit: 14));
 
+            // CorrelationId enricher relies on HttpContextAccessor to read the
+            // incoming `X-Correlation-Id` header (T087).
+            builder.Services.AddHttpContextAccessor();
+
             builder.Services
                 .AddDomain()
                 .AddDataLayer(builder.Configuration)
                 .AddBusinessLayer()
                 .AddPresentationLayer();
+
+            // T086: hourly cleanup of expired idempotency rows (research.md R-2).
+            builder.Services.AddHostedService<IdempotencyCleanupService>();
 
             string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
             if (!string.IsNullOrWhiteSpace(connectionString))

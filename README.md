@@ -121,7 +121,20 @@ git clone https://github.com/applicapr/ChangeOrder.git
 cd ChangeOrder
 ```
 
-### 2. Configurar la base de datos
+### 2. Variables de entorno (solo este host)
+
+Si se trabaja en un host afectado por el bug de HTTP/2 ALPN contra `api.nuget.org`
+(documentado en `specs/001-change-order-management/research.md` R-10), todo
+comando `dotnet` debe ejecutarse con estas variables:
+
+```bash
+export DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2SUPPORT=false
+export DOTNET_SYSTEM_NET_DISABLEIPV6=1
+```
+
+Los runners de GitHub Actions no requieren estas variables.
+
+### 3. Configurar la base de datos
 
 Editar `src/ChangeOrder.Host/appsettings.Development.json`:
 
@@ -133,25 +146,66 @@ Editar `src/ChangeOrder.Host/appsettings.Development.json`:
 }
 ```
 
-### 3. Aplicar migraciones
+### 4. Aplicar migraciones
 
 ```bash
-dotnet ef database update --project src/ChangeOrder.Data --startup-project src/ChangeOrder.Host
+dotnet ef database update \
+  --project src/ChangeOrder.Data \
+  --startup-project src/ChangeOrder.Host
 ```
 
-### 4. Ejecutar la aplicacion
+### 5. Ejecutar la aplicacion
 
 ```bash
-dotnet run --project src/ChangeOrder.Host
+dotnet run --project src/ChangeOrder.Host --launch-profile http
 ```
 
-La API estara disponible en `https://localhost:5001` con Swagger UI.
+La API queda disponible en `http://localhost:5151`. En entorno Development se
+publican Scalar (`/scalar`) y el documento OpenAPI (`/openapi/v1.json`).
 
-### 5. Ejecutar tests
+### 6. Probar el endpoint principal
 
 ```bash
-dotnet test
+curl -sS -X POST http://localhost:5151/api/v1/change-orders \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: demo-20260513-001' \
+  -d '{
+        "programName": "BillingApp",
+        "productionVersion": "v1.0.0",
+        "workDescription": "Fix rounding bug",
+        "requestDetails": "Add half-even rounding to totals.",
+        "justification": "Customer complaints about cents off.",
+        "requiredAction": "Patch Module B, redeploy.",
+        "requester": {
+          "fullName": "Jane Doe",
+          "position": "QA Lead",
+          "department": "Quality",
+          "email": "jane.doe@example.com"
+        }
+      }'
 ```
+
+La respuesta `201 Created` incluye el `orderNumber` con formato `yyyyMMdd-##`.
+Reenviar el mismo `Idempotency-Key` con el mismo payload devuelve `200 OK` con
+el mismo recurso; con un payload distinto devuelve `422` (`idempotency.payload_divergence`).
+
+### 7. Health check y version
+
+```bash
+curl -sS http://localhost:5151/health           # 200 si SQL Server responde
+curl -sS http://localhost:5151/version          # { name, version, environment }
+```
+
+### 8. Ejecutar tests
+
+```bash
+dotnet test                                                   # suite completa
+dotnet test --filter "Category!=Testcontainers&Category!=RateLimit"   # CI fast lane
+```
+
+Los tests marcados con `[Trait("Category","Testcontainers")]` requieren Docker;
+`RateLimit` puede dejarse fuera del lane interactivo porque consume 100+
+requests por ventana.
 
 ## Docker
 
@@ -182,6 +236,44 @@ El pipeline de GitHub Actions (`.github/workflows/ci.yml`) se ejecuta en cada pu
 - **PRs obligatorios** para merge a `main` con merge commit (`--no-ff`).
 - **Testing**: xUnit + FluentAssertions + NSubstitute
 - **Mappers manuales**: sin AutoMapper, metodos estaticos explicitos.
+
+## Spec-Driven Development
+
+Este repositorio sigue el flujo **Spec-Driven Development (Spec Kit)**: cada
+feature se planifica como un conjunto inmutable de artefactos en
+`specs/<feature-id>/` antes de escribir codigo. La feature actual es
+`001-change-order-management` (rama `001-change-order-management`).
+
+Artefactos por feature:
+
+| Archivo | Proposito |
+|---|---|
+| `spec.md` | Requisitos funcionales (FR) y criterios de exito (SC). |
+| `plan.md` | Plan tecnico y gates constitucionales. |
+| `research.md` | Decisiones tecnicas (R-1..R-10) con alternativas. |
+| `data-model.md` | Entidades, value objects, enums. |
+| `contracts/openapi.yaml` | Contrato OpenAPI 3.1 autoritativo. |
+| `quickstart.md` | Pasos para levantar la feature en local. |
+| `tasks.md` | Plan de implementacion (T001..T094, fases setup -> polish). |
+| `checklists/` | Listas de calidad por dominio (api, data-model, security, completeness). |
+
+La **constitucion** del proyecto vive en `.specify/memory/constitution.md` y
+fija los seis principios no negociables (Domain puro, Onion estricto, Result
+Pattern, etc.). Cada `plan.md` declara explicitamente que esos gates se
+mantienen verdes.
+
+Comandos `/speckit-*` orquestan el ciclo:
+
+```
+/speckit-specify     # crea spec.md
+/speckit-clarify     # resuelve preguntas abiertas
+/speckit-plan        # genera plan + research + data-model + contracts + quickstart
+/speckit-tasks       # produce tasks.md ordenado por dependencias
+/speckit-analyze     # auditoria cruzada de los artefactos
+/speckit-implement   # ejecuta tasks.md en orden
+```
+
+Para revisar el estado actual de la implementacion: `specs/001-change-order-management/tasks.md`.
 
 ## Documentacion
 

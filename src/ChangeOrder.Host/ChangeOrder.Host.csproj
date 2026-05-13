@@ -28,6 +28,17 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
 
+    <!--
+      Enrichers used by both Development and Production sinks (T087).
+      `Environment` covers `EnvironmentName` and `MachineName`; the
+      `WithCorrelationId` enricher reads/writes the standard
+      `X-Correlation-Id` header so cross-service traces stay coherent.
+    -->
+    <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
+    <PackageReference Include="Serilog.Enrichers.CorrelationId" Version="3.0.1" />
+    <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
+    <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
+
     <!-- Health checks (SQL Server) -->
     <PackageReference Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
 
