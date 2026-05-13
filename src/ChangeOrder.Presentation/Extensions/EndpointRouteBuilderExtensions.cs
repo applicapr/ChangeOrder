@@ -55,7 +55,14 @@ public static class EndpointRouteBuilderExtensions
                 Environment: env.EnvironmentName));
         })
         .WithName("getVersion")
-        .WithTags("meta");
+        .WithTags("meta")
+        .WithSummary("Service identity and version")
+        .WithDescription(
+            "Returns the running service name, semantic version (sourced from " +
+            "AssemblyInformationalVersionAttribute) and hosting environment. " +
+            "Lives outside `/api/v{version}` so monitoring tools can probe " +
+            "build identity without negotiating an API version.")
+        .Produces<VersionResponse>(StatusCodes.Status200OK);
 
         return endpoints;
     }
@@ -77,19 +84,55 @@ public static class EndpointRouteBuilderExtensions
             .WithTags("change-orders");
 
         group.MapPost("/", CreateChangeOrderAsync)
-            .WithName("createChangeOrder");
+            .WithName("createChangeOrder")
+            .WithSummary("Create a new change order (idempotent via Idempotency-Key)")
+            .WithDescription(
+                "Creates a new ChangeOrder, assigns a thread-safe OrderNumber in " +
+                "format `yyyyMMdd-##` and honors the `Idempotency-Key` request header. " +
+                "Replaying the same key with the same payload returns 200 with the " +
+                "original row; same key with a different payload returns 422 " +
+                "(`idempotency.payload_divergence`).")
+            .Produces<OrderResponse>(StatusCodes.Status201Created)
+            .Produces<OrderResponse>(StatusCodes.Status200OK)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
         group.MapGet("/", ListChangeOrdersStub)
-            .WithName("listChangeOrders");
+            .WithName("listChangeOrders")
+            .WithSummary("List change orders (paginated, excludes soft-deleted)")
+            .WithDescription("Not implemented yet — returns 501. Planned for User Story 3 (T072-T086).")
+            .Produces(StatusCodes.Status501NotImplemented);
+
         group.MapGet("/{id:guid}", GetChangeOrderByIdStub)
-            .WithName("getChangeOrderById");
+            .WithName("getChangeOrderById")
+            .WithSummary("Fetch a single change order by id")
+            .WithDescription("Not implemented yet — returns 501. Planned for User Story 3 (T072-T086).")
+            .Produces(StatusCodes.Status501NotImplemented);
+
         group.MapPut("/{id:guid}", UpdateChangeOrderStub)
-            .WithName("updateChangeOrder");
+            .WithName("updateChangeOrder")
+            .WithSummary("Update a change order (only in Draft state, optimistic concurrency)")
+            .WithDescription("Not implemented yet — returns 501. Planned for User Story 3 (T072-T086).")
+            .Produces(StatusCodes.Status501NotImplemented);
+
         group.MapDelete("/{id:guid}", DeleteChangeOrderStub)
-            .WithName("deleteChangeOrder");
+            .WithName("deleteChangeOrder")
+            .WithSummary("Soft-delete a change order")
+            .WithDescription("Not implemented yet — returns 501. Planned for User Story 3 (T072-T086).")
+            .Produces(StatusCodes.Status501NotImplemented);
+
         group.MapPut("/{id:guid}/approvals/{level}", RecordApprovalStub)
-            .WithName("recordApproval");
+            .WithName("recordApproval")
+            .WithSummary("Record an approval verdict for one of the four chain levels")
+            .WithDescription("Not implemented yet — returns 501. Planned for User Story 2 (T063-T071).")
+            .Produces(StatusCodes.Status501NotImplemented);
+
         group.MapPatch("/{id:guid}/dates", RecordMilestoneDatesStub)
-            .WithName("recordMilestoneDates");
+            .WithName("recordMilestoneDates")
+            .WithSummary("Record milestone dates (delivery, evaluation, production deploy)")
+            .WithDescription("Not implemented yet — returns 501. Planned for User Story 2 (T063-T071).")
+            .Produces(StatusCodes.Status501NotImplemented);
 
         return endpoints;
     }

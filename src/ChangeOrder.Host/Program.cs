@@ -4,6 +4,7 @@ using ChangeOrder.Data.Extensions;
 using ChangeOrder.Domain.Extensions;
 using ChangeOrder.Presentation.Extensions;
 using Microsoft.Extensions.Hosting;
+using Scalar.AspNetCore;
 using Serilog;
 
 namespace ChangeOrder.Host;
@@ -68,6 +69,10 @@ public partial class Program
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
+                app.MapScalarApiReference(options =>
+                {
+                    options.WithTitle("ChangeOrder.Api");
+                });
             }
 
             app.UseHttpsRedirection();
