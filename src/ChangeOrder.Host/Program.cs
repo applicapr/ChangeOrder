@@ -3,6 +3,7 @@ using ChangeOrder.Business.Extensions;
 using ChangeOrder.Data.Extensions;
 using ChangeOrder.Domain.Extensions;
 using ChangeOrder.Presentation.Extensions;
+using Microsoft.Extensions.Hosting;
 using Serilog;
 
 namespace ChangeOrder.Host;
@@ -77,8 +78,12 @@ public partial class Program
 
             app.Run();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not HostAbortedException)
         {
+            // HostAbortedException is thrown by EF Core design-time tooling
+            // (e.g. `dotnet ef database update`) which intentionally aborts the
+            // host after resolving the DbContext. Letting it bypass this catch
+            // keeps the migrations sidecar logs clean of spurious [FTL] entries.
             Log.Fatal(ex, "ChangeOrder.Host terminated unexpectedly.");
             throw;
         }
