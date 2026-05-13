@@ -49,6 +49,23 @@ public sealed partial class UnitOfWork : IUnitOfWork
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<Result<int, Error>> SaveChangesWithConcurrencyDetectionAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            int affected = await _dbContext
+                .SaveChangesAsync(cancellationToken)
+                .ConfigureAwait(false);
+            return Result<int, Error>.Success(affected);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            LogConcurrencyConflict(ex);
+            return Result<int, Error>.Failure(DomainErrors.Order.ConcurrencyConflict());
+        }
+    }
+
     private static bool IsUniqueViolation(DbUpdateException ex)
     {
         return ex.InnerException is SqlException sqlEx
@@ -61,4 +78,10 @@ public sealed partial class UnitOfWork : IUnitOfWork
         Level = LogLevel.Warning,
         Message = "UNIQUE constraint violation while persisting ChangeOrder; caller should retry.")]
     private partial void LogUniqueViolation(Exception ex);
+
+    [LoggerMessage(
+        EventId = 2002,
+        Level = LogLevel.Warning,
+        Message = "ROWVERSION mismatch while persisting ChangeOrder; client must refetch and retry (FR-013).")]
+    private partial void LogConcurrencyConflict(Exception ex);
 }

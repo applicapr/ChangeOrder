@@ -3,8 +3,13 @@ using Asp.Versioning;
 using Asp.Versioning.Builder;
 using ChangeOrder.Business.Abstractions;
 using ChangeOrder.Business.Commands.CreateOrder;
+using ChangeOrder.Business.Commands.DeleteOrder;
 using ChangeOrder.Business.Commands.RecordApproval;
 using ChangeOrder.Business.Commands.RecordMilestoneDates;
+using ChangeOrder.Business.Commands.UpdateOrder;
+using ChangeOrder.Business.Common;
+using ChangeOrder.Business.Queries.GetAllOrders;
+using ChangeOrder.Business.Queries.GetOrderById;
 using ChangeOrder.Domain.Errors;
 using ChangeOrder.Presentation.Common;
 using ChangeOrder.Presentation.DTOs.Requests;
@@ -16,14 +21,14 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
+using DomainChangeOrder = ChangeOrder.Domain.Entities.ChangeOrder;
 
 namespace ChangeOrder.Presentation.Extensions;
 
 /// <summary>
 /// Minimal-API endpoint mapping for the <c>/api/v1/change-orders</c> group.
-/// US1 (Create) and US2 (Approval workflow + milestone dates) are implemented;
-/// the US3 verbs (list, get, update, delete) remain stubbed at 501 Not
-/// Implemented until their user story is tackled.
+/// US1 (Create), US2 (Approval workflow + milestone dates) and US3
+/// (list / get / update / delete) are fully wired here.
 /// </summary>
 public static class EndpointRouteBuilderExtensions
 {
@@ -101,29 +106,56 @@ public static class EndpointRouteBuilderExtensions
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
-        group.MapGet("/", ListChangeOrdersStub)
+        group.MapGet("/", ListChangeOrdersAsync)
             .WithName("listChangeOrders")
             .WithSummary("List change orders (paginated, excludes soft-deleted)")
-            .WithDescription("Not implemented yet — returns 501. Planned for User Story 3 (T072-T086).")
-            .Produces(StatusCodes.Status501NotImplemented);
+            .WithDescription(
+                "Returns a paginated page of non-soft-deleted change orders, ordered by " +
+                "`RequestDate` descending. Page defaults to 1, pageSize defaults to 10, " +
+                "and pageSize is bounded to [1..50] by the constitution. Soft-deleted " +
+                "rows are filtered out via the EF Core global query filter (FR-009).")
+            .Produces<PagedOrderResponse>(StatusCodes.Status200OK)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
-        group.MapGet("/{id:guid}", GetChangeOrderByIdStub)
+        group.MapGet("/{id:guid}", GetChangeOrderByIdAsync)
             .WithName("getChangeOrderById")
             .WithSummary("Fetch a single change order by id")
-            .WithDescription("Not implemented yet — returns 501. Planned for User Story 3 (T072-T086).")
-            .Produces(StatusCodes.Status501NotImplemented);
+            .WithDescription(
+                "Returns the canonical `OrderResponse`, including the base64-encoded " +
+                "`rowVersion` the client must echo on subsequent `PUT` requests for " +
+                "optimistic-concurrency control (FR-013). Soft-deleted rows are not " +
+                "visible — calling this endpoint after `DELETE` returns 404.")
+            .Produces<OrderResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
-        group.MapPut("/{id:guid}", UpdateChangeOrderStub)
+        group.MapPut("/{id:guid}", UpdateChangeOrderAsync)
             .WithName("updateChangeOrder")
             .WithSummary("Update a change order (only in Draft state, optimistic concurrency)")
-            .WithDescription("Not implemented yet — returns 501. Planned for User Story 3 (T072-T086).")
-            .Produces(StatusCodes.Status501NotImplemented);
+            .WithDescription(
+                "Replaces the editable content of the order. Allowed only while in " +
+                "`Draft` (FR-006 / C-1); any other state returns 409 with " +
+                "`order.edit_after_draft`. The submitted `rowVersion` must match the " +
+                "persisted SQL Server `rowversion` token — a mismatch returns 409 with " +
+                "`order.concurrency_conflict` (FR-013).")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
-        group.MapDelete("/{id:guid}", DeleteChangeOrderStub)
+        group.MapDelete("/{id:guid}", DeleteChangeOrderAsync)
             .WithName("deleteChangeOrder")
             .WithSummary("Soft-delete a change order")
-            .WithDescription("Not implemented yet — returns 501. Planned for User Story 3 (T072-T086).")
-            .Produces(StatusCodes.Status501NotImplemented);
+            .WithDescription(
+                "Soft-deletes the order: the row is preserved, `IsDeleted` is set to " +
+                "`true` and `DeletedAt` to the UTC timestamp (FR-008/009). The " +
+                "`AuditInterceptor` performs the conversion on `SaveChangesAsync`. " +
+                "Subsequent `GET`/`LIST` calls will not return the row.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         group.MapPut("/{id:guid}/approvals/{level}", RecordApprovalAsync)
             .WithName("recordApproval")
@@ -281,15 +313,93 @@ public static class EndpointRouteBuilderExtensions
         return TypedResults.NoContent();
     }
 
-    private static StatusCodeHttpResult ListChangeOrdersStub(HttpContext context) =>
-        TypedResults.StatusCode(StatusCodes.Status501NotImplemented);
+    private const int DefaultPage = 1;
+    private const int DefaultPageSize = 10;
 
-    private static StatusCodeHttpResult GetChangeOrderByIdStub(Guid id) =>
-        TypedResults.StatusCode(StatusCodes.Status501NotImplemented);
+    private static async Task<IResult> ListChangeOrdersAsync(
+        HttpContext httpContext,
+        IQueryHandler<GetAllOrdersQuery, Result<PagedResponse<DomainChangeOrder>, Error>> handler,
+        CancellationToken cancellationToken,
+        [FromQuery] int? page = null,
+        [FromQuery] int? pageSize = null)
+    {
+        GetAllOrdersQuery query = new(
+            Page: page ?? DefaultPage,
+            PageSize: pageSize ?? DefaultPageSize);
 
-    private static StatusCodeHttpResult UpdateChangeOrderStub(Guid id) =>
-        TypedResults.StatusCode(StatusCodes.Status501NotImplemented);
+        Result<PagedResponse<DomainChangeOrder>, Error> result = await handler.HandleAsync(query, cancellationToken);
+        if (result.IsFailure)
+        {
+            ProblemDetails problem = ProblemDetailsFactory.FromError(result.Error!, httpContext.Request.Path);
+            return TypedResults.Problem(problem);
+        }
 
-    private static StatusCodeHttpResult DeleteChangeOrderStub(Guid id) =>
-        TypedResults.StatusCode(StatusCodes.Status501NotImplemented);
+        PagedOrderResponse response = result.Value!.ToResponse();
+        return TypedResults.Ok(response);
+    }
+
+    private static async Task<IResult> GetChangeOrderByIdAsync(
+        Guid id,
+        HttpContext httpContext,
+        IQueryHandler<GetOrderByIdQuery, Result<DomainChangeOrder, Error>> handler,
+        CancellationToken cancellationToken)
+    {
+        GetOrderByIdQuery query = new(id);
+        Result<DomainChangeOrder, Error> result = await handler.HandleAsync(query, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            ProblemDetails problem = ProblemDetailsFactory.FromError(result.Error!, httpContext.Request.Path);
+            return TypedResults.Problem(problem);
+        }
+
+        return TypedResults.Ok(result.Value!.ToResponse());
+    }
+
+    private static async Task<IResult> UpdateChangeOrderAsync(
+        Guid id,
+        UpdateOrderRequest request,
+        HttpContext httpContext,
+        ICommandHandler<UpdateOrderCommand, Result<TVoid, Error>> handler,
+        CancellationToken cancellationToken)
+    {
+        if (request is null)
+        {
+            return BadRequest("validation.error", "Request body is required.");
+        }
+
+        Result<UpdateOrderCommand, Error> mapped = request.ToCommand(id);
+        if (mapped.IsFailure)
+        {
+            ProblemDetails validationProblem = ProblemDetailsFactory.FromError(mapped.Error!, httpContext.Request.Path);
+            return TypedResults.Problem(validationProblem);
+        }
+
+        Result<TVoid, Error> result = await handler.HandleAsync(mapped.Value!, cancellationToken);
+        if (result.IsFailure)
+        {
+            ProblemDetails problem = ProblemDetailsFactory.FromError(result.Error!, httpContext.Request.Path);
+            return TypedResults.Problem(problem);
+        }
+
+        return TypedResults.NoContent();
+    }
+
+    private static async Task<IResult> DeleteChangeOrderAsync(
+        Guid id,
+        HttpContext httpContext,
+        ICommandHandler<DeleteOrderCommand, Result<TVoid, Error>> handler,
+        CancellationToken cancellationToken)
+    {
+        DeleteOrderCommand command = new(id);
+        Result<TVoid, Error> result = await handler.HandleAsync(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            ProblemDetails problem = ProblemDetailsFactory.FromError(result.Error!, httpContext.Request.Path);
+            return TypedResults.Problem(problem);
+        }
+
+        return TypedResults.NoContent();
+    }
 }

@@ -172,23 +172,23 @@ Onion layout fixed by `.specify/memory/constitution.md` v1.0.0:
 
 ### Implementation for User Story 3
 
-- [ ] T072 [P] [US3] Add `src/ChangeOrder.Business/Queries/GetOrderById/GetOrderByIdQuery.cs` (record with `Id`)
-- [ ] T073 [P] [US3] Add `src/ChangeOrder.Business/Queries/GetOrderById/GetOrderByIdHandler.cs` — returns `Result<OrderResponse, Error>`; 404 emits `DomainErrors.Order.NotFound`
-- [ ] T074 [P] [US3] Add `src/ChangeOrder.Business/Queries/GetAllOrders/GetAllOrdersQuery.cs` (extends `PagedRequest`)
-- [ ] T075 [US3] Add `src/ChangeOrder.Business/Queries/GetAllOrders/GetAllOrdersHandler.cs` — returns `PagedResponse<OrderResponse>`; validates `Page>=1`, `PageSize ∈ [1..50]`, exposes `TotalCount` from `CountAsync`
-- [ ] T076 [P] [US3] Add `src/ChangeOrder.Business/Commands/UpdateOrder/UpdateOrderCommand.cs` — includes `RowVersion` (byte[]) for FR-013
-- [ ] T077 [US3] Add `src/ChangeOrder.Business/Commands/UpdateOrder/UpdateOrderHandler.cs` — only accepts mutation when `OrderStatus == Draft`; otherwise emits `DomainErrors.Order.EditAfterDraft` (HTTP 409) per the C-1 clarification. Sets the entity's `RowVersion` from the command before `SaveChangesAsync`; catches `DbUpdateConcurrencyException` and returns `DomainErrors.Order.ConcurrencyConflict` (HTTP 409) per FR-013
-- [ ] T078 [P] [US3] Add `src/ChangeOrder.Business/Commands/DeleteOrder/DeleteOrderCommand.cs`
-- [ ] T079 [US3] Add `src/ChangeOrder.Business/Commands/DeleteOrder/DeleteOrderHandler.cs` — calls `Remove` on the entity; the `AuditInterceptor` converts this to a soft delete automatically (no manual flag flipping)
-- [ ] T080 [P] [US3] Add `src/ChangeOrder.Presentation/DTOs/Requests/UpdateOrderRequest.cs` — extends `CreateOrderRequest` shape and includes a required `RowVersion` (base64-encoded) for FR-013
-- [ ] T081 [US3] Extend `EndpointRouteBuilderExtensions.MapChangeOrderApi` with `GET /` (paged), `GET /{id}`, `PUT /{id}` (Draft-only), `DELETE /{id}`, all wired to their respective handlers and `ProblemDetailsFactory`
+- [X] T072 [P] [US3] Add `src/ChangeOrder.Business/Queries/GetOrderById/GetOrderByIdQuery.cs` (record with `Id`)
+- [X] T073 [P] [US3] Add `src/ChangeOrder.Business/Queries/GetOrderById/GetOrderByIdHandler.cs` — returns `Result<OrderResponse, Error>`; 404 emits `DomainErrors.Order.NotFound`
+- [X] T074 [P] [US3] Add `src/ChangeOrder.Business/Queries/GetAllOrders/GetAllOrdersQuery.cs` (extends `PagedRequest`)
+- [X] T075 [US3] Add `src/ChangeOrder.Business/Queries/GetAllOrders/GetAllOrdersHandler.cs` — returns `PagedResponse<OrderResponse>`; validates `Page>=1`, `PageSize ∈ [1..50]`, exposes `TotalCount` from `CountAsync`
+- [X] T076 [P] [US3] Add `src/ChangeOrder.Business/Commands/UpdateOrder/UpdateOrderCommand.cs` — includes `RowVersion` (byte[]) for FR-013
+- [X] T077 [US3] Add `src/ChangeOrder.Business/Commands/UpdateOrder/UpdateOrderHandler.cs` — only accepts mutation when `OrderStatus == Draft`; otherwise emits `DomainErrors.Order.EditAfterDraft` (HTTP 409) per the C-1 clarification. Sets the entity's `RowVersion` from the command before `SaveChangesAsync`; catches `DbUpdateConcurrencyException` and returns `DomainErrors.Order.ConcurrencyConflict` (HTTP 409) per FR-013
+- [X] T078 [P] [US3] Add `src/ChangeOrder.Business/Commands/DeleteOrder/DeleteOrderCommand.cs`
+- [X] T079 [US3] Add `src/ChangeOrder.Business/Commands/DeleteOrder/DeleteOrderHandler.cs` — calls `Remove` on the entity; the `AuditInterceptor` converts this to a soft delete automatically (no manual flag flipping)
+- [X] T080 [P] [US3] Add `src/ChangeOrder.Presentation/DTOs/Requests/UpdateOrderRequest.cs` — extends `CreateOrderRequest` shape and includes a required `RowVersion` (base64-encoded) for FR-013
+- [X] T081 [US3] Extend `EndpointRouteBuilderExtensions.MapChangeOrderApi` with `GET /` (paged), `GET /{id}`, `PUT /{id}` (Draft-only), `DELETE /{id}`, all wired to their respective handlers and `ProblemDetailsFactory`
 
 ### Tests for User Story 3
 
-- [ ] T082 [P] [US3] `tests/ChangeOrder.Business.Tests/Queries/GetAllOrdersHandlerTests.cs` — pagination math (`TotalPages`, edge cases at `Page=1` and `Page=lastPage`), invalid pageSize rejected
-- [ ] T083 [P] [US3] `tests/ChangeOrder.Business.Tests/Commands/UpdateOrderHandlerTests.cs` — succeeds in Draft, returns `EditAfterDraft` in every other status
-- [ ] T084 [P] [US3] `tests/ChangeOrder.Data.Tests/SoftDelete/SoftDeleteQueryFilterTests.cs` — a soft-deleted order is invisible to `GET` paths; using `IgnoreQueryFilters()` makes it visible (audit-tool surface, future use)
-- [ ] T085 [P] [US3] `tests/ChangeOrder.Presentation.Tests/Endpoints/MaintenanceEndpointsTests.cs` — list/get/update/delete end-to-end against `WebApplicationFactory<Program>`
+- [X] T082 [P] [US3] `tests/ChangeOrder.Business.Tests/Queries/GetAllOrdersHandlerTests.cs` — pagination math (`TotalPages`, edge cases at `Page=1` and `Page=lastPage`), invalid pageSize rejected
+- [X] T083 [P] [US3] `tests/ChangeOrder.Business.Tests/Commands/UpdateOrderHandlerTests.cs` — succeeds in Draft, returns `EditAfterDraft` in every other status
+- [X] T084 [P] [US3] `tests/ChangeOrder.Data.Tests/SoftDelete/SoftDeleteQueryFilterTests.cs` — a soft-deleted order is invisible to `GET` paths; using `IgnoreQueryFilters()` makes it visible (audit-tool surface, future use)
+- [X] T085 [P] [US3] `tests/ChangeOrder.Presentation.Tests/Endpoints/MaintenanceEndpointsTests.cs` — list/get/update/delete end-to-end against `WebApplicationFactory<Program>`
 
 **Checkpoint**: All three user stories pass independently. The full CRUD + governance surface is functional.
 
