@@ -81,5 +81,18 @@ public sealed class AuditInterceptor : SaveChangesInterceptor
         {
             auditable.UpdatedAt = nowUtc;
         }
+
+        // EF detaches owned entries when the aggregate is set to Deleted.
+        // Flipping the parent back to Modified does not restore them, so the
+        // generated UPDATE would send NULL for every owned column and SQL
+        // Server would reject it. Re-tracking the owned references as
+        // Unchanged keeps their stored values in the UPDATE statement.
+        foreach (ReferenceEntry reference in entry.References)
+        {
+            if (reference.TargetEntry is { } targetEntry && targetEntry.Metadata.IsOwned())
+            {
+                targetEntry.State = EntityState.Unchanged;
+            }
+        }
     }
 }
