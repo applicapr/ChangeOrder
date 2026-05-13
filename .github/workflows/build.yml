@@ -1,0 +1,89 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+
+jobs:
+  # Restaura, compila y corre la suite de tests (excluye categorias gateadas)
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Build.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore ChangeOrder.slnx
+
+      - name: Build
+        # TreatWarningsAsErrors=true vive en Directory.Build.props; el flag aqui es defensivo.
+        run: dotnet build ChangeOrder.slnx --no-restore --configuration Release /p:TreatWarningsAsErrors=true
+
+      - name: Run tests
+        # Excluye categorias gateadas: Testcontainers (necesita Docker-in-Docker),
+        # RateLimit (consume >100 req/min), Performance (load test largo).
+        run: >-
+          dotnet test ChangeOrder.slnx
+          --no-build
+          --configuration Release
+          --verbosity normal
+          --collect:"XPlat Code Coverage"
+          --filter "Category!=Testcontainers&Category!=RateLimit&Category!=Performance"
+          --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v6
+        with:
+          files: '**/coverage.cobertura.xml'
+          fail_ci_if_error: false
+
+  # Verifica formato y analizadores de codigo
+  build-quality:
+    name: Code Style and Analyzers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ChangeOrder.slnx
+
+      - name: Check code formatting
+        run: dotnet format ChangeOrder.slnx --verify-no-changes --verbosity diagnostic
+
+      - name: Analyze code
+        run: dotnet build ChangeOrder.slnx /p:RunAnalyzers=true /p:AnalysisMode=Recommended /p:TreatWarningsAsErrors=true

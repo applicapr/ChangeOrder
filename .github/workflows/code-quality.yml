@@ -1,0 +1,164 @@
+name: Code Quality Checks
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Garantiza que ningun archivo .cs supere las 500 lineas significativas
+  # (excluyendo lineas en blanco y XML-doc ///). Quality bar de la constitucion.
+  file-size-check:
+    runs-on: ubuntu-latest
+    name: Check File Sizes
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Check file sizes (max 500 lines)
+        run: |
+          echo "Verificando archivos que excedan 500 lineas..."
+          LARGE_FILES=$(find . -type f -name "*.cs" \
+            ! -path "*/bin/*" \
+            ! -path "*/obj/*" \
+            ! -path "*/.git/*" \
+            ! -name "*.g.cs" \
+            ! -name "*Designer.cs" \
+            ! -name "*.Designer.cs" \
+            ! -path "*/Migrations/*.cs" \
+            -exec awk '!/^[[:space:]]*$/ && !/^[[:space:]]*\/\/\// {count++} END {if (count > 500) print FILENAME " (" count " code lines)"}' {} \;)
+
+          if [ -n "$LARGE_FILES" ]; then
+            echo "FAIL - Archivos que exceden 500 lineas:"
+            echo "$LARGE_FILES"
+            exit 1
+          else
+            echo "OK - Todos los archivos estan dentro del limite de 500 lineas"
+          fi
+
+  # Verifica que cada namespace declarado coincida con la estructura de carpetas.
+  naming-convention-check:
+    runs-on: ubuntu-latest
+    name: Check Naming Conventions
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Verify namespace matches folder structure
+        run: |
+          echo "Verificando que namespaces coincidan con carpetas..."
+          VIOLATIONS=""
+
+          while IFS= read -r FILE; do
+            NAMESPACE=$(grep -m 1 -E "^namespace " "$FILE" | sed 's/namespace //;s/[;{]//;s/[[:space:]]*$//')
+
+            if [ -z "$NAMESPACE" ]; then
+              continue
+            fi
+
+            # The conventional `src/` and `tests/` folders are NOT part of the
+            # namespace; strip them before comparing folder structure against
+            # the declared namespace.
+            DIR=$(dirname "$FILE" | sed 's|\./||;s|^src/||;s|^tests/||;s|/|.|g')
+
+            if [ "$NAMESPACE" != "$DIR" ]; then
+              VIOLATIONS+="  $FILE"$'\n'
+              VIOLATIONS+="    Declarado: $NAMESPACE"$'\n'
+              VIOLATIONS+="    Esperado:  $DIR"$'\n'
+            fi
+          done < <(find . -type f -name "*.cs" \
+            ! -path "*/bin/*" \
+            ! -path "*/obj/*" \
+            ! -path "*/.git/*" \
+            ! -path "*/test/*" \
+            ! -path "*/tests/*" \
+            ! -name "*.g.cs" \
+            ! -name "*Designer.cs" \
+            ! -name "AssemblyInfo.cs" \
+            ! -name "GlobalUsings.cs")
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "VIOLACION: Namespaces que no coinciden con la estructura de carpetas:"
+            echo "$VIOLATIONS"
+            exit 1
+          else
+            echo "OK: Todos los namespaces coinciden con la estructura de carpetas"
+          fi
+
+  # Onion Architecture: las dependencias deben apuntar hacia adentro.
+  # Domain        -> sin dependencias outward
+  # Business      -> solo a Domain
+  # Data          -> solo a Domain
+  # Presentation  -> solo a Business
+  # Host          -> Composition root, puede a todos (no se valida).
+  architecture-check:
+    runs-on: ubuntu-latest
+    name: Check Architecture Dependencies
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Verify layer dependencies (Onion Architecture)
+        run: |
+          echo "Verificando dependencias arquitectonicas (Onion Architecture)..."
+          VIOLATIONS_FOUND=false
+
+          DOMAIN_VIOLATIONS=$(grep -rn \
+            -e "using ChangeOrder.Business" \
+            -e "using ChangeOrder.Data" \
+            -e "using ChangeOrder.Presentation" \
+            -e "using ChangeOrder.Host" \
+            --include="*.cs" \
+            --exclude-dir="tests" \
+            src/ChangeOrder.Domain/ 2>/dev/null || true)
+          if [ -n "$DOMAIN_VIOLATIONS" ]; then
+            echo "VIOLACION en Domain (no puede depender de Business/Data/Presentation/Host):"
+            echo "$DOMAIN_VIOLATIONS"
+            VIOLATIONS_FOUND=true
+          fi
+
+          BUSINESS_VIOLATIONS=$(grep -rn \
+            -e "using ChangeOrder.Data" \
+            -e "using ChangeOrder.Presentation" \
+            -e "using ChangeOrder.Host" \
+            --include="*.cs" \
+            --exclude-dir="tests" \
+            src/ChangeOrder.Business/ 2>/dev/null || true)
+          if [ -n "$BUSINESS_VIOLATIONS" ]; then
+            echo "VIOLACION en Business (solo puede depender de Domain):"
+            echo "$BUSINESS_VIOLATIONS"
+            VIOLATIONS_FOUND=true
+          fi
+
+          DATA_VIOLATIONS=$(grep -rn \
+            -e "using ChangeOrder.Business" \
+            -e "using ChangeOrder.Presentation" \
+            -e "using ChangeOrder.Host" \
+            --include="*.cs" \
+            --exclude-dir="tests" \
+            src/ChangeOrder.Data/ 2>/dev/null || true)
+          if [ -n "$DATA_VIOLATIONS" ]; then
+            echo "VIOLACION en Data (solo puede depender de Domain):"
+            echo "$DATA_VIOLATIONS"
+            VIOLATIONS_FOUND=true
+          fi
+
+          PRESENTATION_VIOLATIONS=$(grep -rn \
+            -e "using ChangeOrder.Data" \
+            -e "using ChangeOrder.Host" \
+            --include="*.cs" \
+            --exclude-dir="tests" \
+            src/ChangeOrder.Presentation/ 2>/dev/null || true)
+          if [ -n "$PRESENTATION_VIOLATIONS" ]; then
+            echo "VIOLACION en Presentation (solo puede depender de Business):"
+            echo "$PRESENTATION_VIOLATIONS"
+            VIOLATIONS_FOUND=true
+          fi
+
+          if [ "$VIOLATIONS_FOUND" = true ]; then
+            exit 1
+          fi
+
+          echo "OK - Todas las dependencias arquitectonicas son validas"
