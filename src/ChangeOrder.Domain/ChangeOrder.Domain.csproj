@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Domain layer — the core of the Onion.
+    Constitution P-I (NON-NEGOTIABLE): ZERO outward dependencies.
+    No PackageReferences, no ProjectReferences.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>ChangeOrder.Domain</RootNamespace>
+    <AssemblyName>ChangeOrder.Domain</AssemblyName>
+  </PropertyGroup>
+
+</Project>

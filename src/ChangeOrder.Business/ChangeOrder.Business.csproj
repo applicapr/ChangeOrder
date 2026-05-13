@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Business layer — Commands/Queries/Handlers (CQRS, feature-sliced).
+    Depends ONLY on Domain.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>ChangeOrder.Business</RootNamespace>
+    <AssemblyName>ChangeOrder.Business</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ChangeOrder.Domain\ChangeOrder.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

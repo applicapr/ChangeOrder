@@ -30,19 +30,19 @@ Onion layout fixed by `.specify/memory/constitution.md` v1.0.0:
 
 **Purpose**: Bring the empty repository to the point where `dotnet build` produces five empty assemblies that respect the Onion graph.
 
-- [ ] T001 Create `Directory.Build.props` at the repo root with `TargetFramework=net10.0`, `LangVersion=14`, `Nullable=enable`, `ImplicitUsings=enable`, `TreatWarningsAsErrors=true`, `GenerateDocumentationFile=true`
-- [ ] T002 [P] Create `.editorconfig` at the repo root enforcing file-scoped namespaces as `error`, explicit types, modifiers always visible, max line length advisory
-- [ ] T003 [P] Create the empty solution file `ChangeOrder.slnx` referencing the five projects under `src/`
-- [ ] T004 Create `src/ChangeOrder.Domain/ChangeOrder.Domain.csproj` (`Microsoft.NET.Sdk`, no PackageReferences, no ProjectReferences)
-- [ ] T005 Create `src/ChangeOrder.Business/ChangeOrder.Business.csproj` (`Microsoft.NET.Sdk`, ProjectReference to `Domain` only)
-- [ ] T006 Create `src/ChangeOrder.Data/ChangeOrder.Data.csproj` (`Microsoft.NET.Sdk`, ProjectReference to `Domain`, PackageReferences for `Microsoft.EntityFrameworkCore.SqlServer` v10.0.x and `Microsoft.EntityFrameworkCore.Design` v10.0.x)
-- [ ] T007 Create `src/ChangeOrder.Presentation/ChangeOrder.Presentation.csproj` (`Microsoft.NET.Sdk`, ProjectReference to `Business` only, PackageReferences for `Asp.Versioning.Http` and `Microsoft.AspNetCore.OpenApi`)
-- [ ] T008 Create `src/ChangeOrder.Host/ChangeOrder.Host.csproj` (`Microsoft.NET.Sdk.Web`, ProjectReferences to `Presentation` and `Data`, PackageReferences for Serilog stack + `AspNetCore.HealthChecks.SqlServer`, AND the `<InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>` line per research.md R-8)
-- [ ] T009 Add the five test project skeletons: `tests/ChangeOrder.Domain.Tests/ChangeOrder.Domain.Tests.csproj`, `Business.Tests`, `Data.Tests`, `Presentation.Tests` (each `Microsoft.NET.Sdk`, ProjectReference to the corresponding production project, PackageReferences for `xunit`, `FluentAssertions`, `NSubstitute`, `Microsoft.NET.Test.Sdk`, `xunit.runner.visualstudio`)
-- [ ] T010 Append the test projects to `ChangeOrder.slnx`
-- [ ] T011 Add `.github/workflows/ci.yml` with `restore → build (0 warnings) → test → 500-line-check` running on push to main and on PRs
-- [ ] T012 Add `src/ChangeOrder.Host/Dockerfile` multi-stage based on `mcr.microsoft.com/dotnet/sdk:10` (build) and `mcr.microsoft.com/dotnet/aspnet:10` (runtime)
-- [ ] T013 Run `dotnet build` end-to-end to confirm the empty solution compiles with **0 warnings, 0 errors** before moving on
+- [X] T001 Create `Directory.Build.props` at the repo root with `TargetFramework=net10.0`, `LangVersion=14`, `Nullable=enable`, `ImplicitUsings=enable`, `TreatWarningsAsErrors=true`, `GenerateDocumentationFile=true`
+- [X] T002 [P] Create `.editorconfig` at the repo root enforcing file-scoped namespaces as `error`, explicit types, modifiers always visible, max line length advisory
+- [X] T003 [P] Create the empty solution file `ChangeOrder.slnx` referencing the five projects under `src/`
+- [X] T004 Create `src/ChangeOrder.Domain/ChangeOrder.Domain.csproj` (`Microsoft.NET.Sdk`, no PackageReferences, no ProjectReferences)
+- [X] T005 Create `src/ChangeOrder.Business/ChangeOrder.Business.csproj` (`Microsoft.NET.Sdk`, ProjectReference to `Domain` only)
+- [X] T006 Create `src/ChangeOrder.Data/ChangeOrder.Data.csproj` (`Microsoft.NET.Sdk`, ProjectReference to `Domain`, PackageReferences for `Microsoft.EntityFrameworkCore.SqlServer` v10.0.x and `Microsoft.EntityFrameworkCore.Design` v10.0.x)
+- [X] T007 Create `src/ChangeOrder.Presentation/ChangeOrder.Presentation.csproj` (`Microsoft.NET.Sdk`, ProjectReference to `Business` only, PackageReferences for `Asp.Versioning.Http` and `Microsoft.AspNetCore.OpenApi`)
+- [X] T008 Create `src/ChangeOrder.Host/ChangeOrder.Host.csproj` (`Microsoft.NET.Sdk.Web`, ProjectReferences to `Presentation` and `Data`, PackageReferences for Serilog stack + `AspNetCore.HealthChecks.SqlServer`, AND the `<InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>` line per research.md R-8)
+- [X] T009 Add the five test project skeletons: `tests/ChangeOrder.Domain.Tests/ChangeOrder.Domain.Tests.csproj`, `Business.Tests`, `Data.Tests`, `Presentation.Tests` (each `Microsoft.NET.Sdk`, ProjectReference to the corresponding production project, PackageReferences for `xunit`, `FluentAssertions`, `NSubstitute`, `Microsoft.NET.Test.Sdk`, `xunit.runner.visualstudio`)
+- [X] T010 Append the test projects to `ChangeOrder.slnx`
+- [X] T011 Add `.github/workflows/ci.yml` with `restore → build (0 warnings) → test → 500-line-check` running on push to main and on PRs
+- [X] T012 Add `src/ChangeOrder.Host/Dockerfile` multi-stage based on `mcr.microsoft.com/dotnet/sdk:10` (build) and `mcr.microsoft.com/dotnet/aspnet:10` (runtime)
+- [X] T013 Run `dotnet build` end-to-end to confirm the empty solution compiles with **0 warnings, 0 errors** before moving on
 
 **Checkpoint**: Empty Onion solution builds clean. No business code yet.
 
