@@ -51,12 +51,8 @@ public sealed partial class GetAllOrdersHandler
         string? filter = NormalizeFilter(query.OrderNumber);
         DomainPagedRequest request = new(query.Page, query.PageSize, filter);
 
-        IReadOnlyList<DomainChangeOrder> items = await _repository
-            .ListAsync(request, cancellationToken)
-            .ConfigureAwait(false);
-
-        int totalCount = await _repository
-            .CountAsync(filter, cancellationToken)
+        (IReadOnlyList<DomainChangeOrder> items, int totalCount) = await _repository
+            .ListPagedAsync(request, cancellationToken)
             .ConfigureAwait(false);
 
         PagedResponse<DomainChangeOrder> page = new(items, totalCount, query.Page, query.PageSize);

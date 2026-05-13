@@ -30,7 +30,7 @@ public sealed class GetOrderByIdHandler : IQueryHandler<GetOrderByIdQuery, Resul
         ArgumentNullException.ThrowIfNull(query);
 
         DomainChangeOrder? order = await _repository
-            .GetByIdAsync(query.Id, cancellationToken)
+            .GetByIdAsNoTrackingAsync(query.Id, cancellationToken)
             .ConfigureAwait(false);
 
         if (order is null)

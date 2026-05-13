@@ -48,4 +48,22 @@ internal sealed class InMemoryUnitOfWork : IUnitOfWork
             return Result<int, Error>.Failure(DomainErrors.Order.ConcurrencyConflict());
         }
     }
+
+    /// <summary>
+    /// The EF Core InMemory provider does not support relational transactions,
+    /// so the test double returns a no-op scope that mirrors the production
+    /// contract: Commit/Rollback succeed without side effects and DisposeAsync
+    /// is idempotent. This lets the WebApplicationFactory exercise the same
+    /// CreateOrderHandler code path that production uses (research.md R-1)
+    /// without forcing a real SQL Server dependency on every endpoint test.
+    /// </summary>
+    public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
+        => Task.FromResult<IUnitOfWorkTransaction>(new NoopTransaction());
+
+    private sealed class NoopTransaction : IUnitOfWorkTransaction
+    {
+        public Task CommitAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task RollbackAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
 }

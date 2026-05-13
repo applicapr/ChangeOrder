@@ -25,10 +25,9 @@ public sealed class GetAllOrdersHandlerTests
     public async Task HandleAsync_EmptyRepository_ReturnsEmptyPage()
     {
         IChangeOrderRepository repository = Substitute.For<IChangeOrderRepository>();
-        repository.ListAsync(Arg.Any<DomainPagedRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<IReadOnlyList<DomainChangeOrder>>(Array.Empty<DomainChangeOrder>()));
-        repository.CountAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(0));
+        repository.ListPagedAsync(Arg.Any<DomainPagedRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<(IReadOnlyList<DomainChangeOrder> Items, int Total)>(
+                (Array.Empty<DomainChangeOrder>(), 0)));
 
         GetAllOrdersHandler handler = new(repository);
         GetAllOrdersQuery query = new(Page: 1, PageSize: 10);
@@ -50,10 +49,8 @@ public sealed class GetAllOrdersHandlerTests
         IReadOnlyList<DomainChangeOrder> page = new List<DomainChangeOrder> { first, second };
 
         IChangeOrderRepository repository = Substitute.For<IChangeOrderRepository>();
-        repository.ListAsync(Arg.Is<DomainPagedRequest>(p => p.Page == 1 && p.PageSize == 2), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(page));
-        repository.CountAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(3));
+        repository.ListPagedAsync(Arg.Is<DomainPagedRequest>(p => p.Page == 1 && p.PageSize == 2), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<(IReadOnlyList<DomainChangeOrder> Items, int Total)>((page, 3)));
 
         GetAllOrdersHandler handler = new(repository);
         GetAllOrdersQuery query = new(Page: 1, PageSize: 2);
@@ -72,10 +69,8 @@ public sealed class GetAllOrdersHandlerTests
         IReadOnlyList<DomainChangeOrder> page = new List<DomainChangeOrder> { tail };
 
         IChangeOrderRepository repository = Substitute.For<IChangeOrderRepository>();
-        repository.ListAsync(Arg.Is<DomainPagedRequest>(p => p.Page == 2 && p.PageSize == 2), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(page));
-        repository.CountAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(3));
+        repository.ListPagedAsync(Arg.Is<DomainPagedRequest>(p => p.Page == 2 && p.PageSize == 2), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<(IReadOnlyList<DomainChangeOrder> Items, int Total)>((page, 3)));
 
         GetAllOrdersHandler handler = new(repository);
         GetAllOrdersQuery query = new(Page: 2, PageSize: 2);
@@ -98,7 +93,7 @@ public sealed class GetAllOrdersHandlerTests
 
         result.IsFailure.Should().BeTrue();
         result.Error!.Code.Should().Be("validation.error");
-        await repository.DidNotReceive().ListAsync(Arg.Any<DomainPagedRequest>(), Arg.Any<CancellationToken>());
+        await repository.DidNotReceive().ListPagedAsync(Arg.Any<DomainPagedRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -112,7 +107,7 @@ public sealed class GetAllOrdersHandlerTests
 
         result.IsFailure.Should().BeTrue();
         result.Error!.Code.Should().Be("validation.error");
-        await repository.DidNotReceive().ListAsync(Arg.Any<DomainPagedRequest>(), Arg.Any<CancellationToken>());
+        await repository.DidNotReceive().ListPagedAsync(Arg.Any<DomainPagedRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

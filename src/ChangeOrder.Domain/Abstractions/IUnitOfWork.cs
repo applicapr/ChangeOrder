@@ -10,6 +10,15 @@ namespace ChangeOrder.Domain.Abstractions;
 public interface IUnitOfWork
 {
     /// <summary>
+    /// Opens an explicit database transaction. Required by research.md R-1 so
+    /// that the <c>UPDLOCK + HOLDLOCK</c> sequence read and the subsequent
+    /// <c>INSERT</c> in <c>CreateOrderHandler</c> run inside the same physical
+    /// transaction, keeping the row-lock held across both statements.
+    /// </summary>
+    /// <param name="cancellationToken">Token used to abort the operation.</param>
+    public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken);
+
+    /// <summary>
     /// Persists pending changes. Returns the number of state entries written.
     /// </summary>
     /// <param name="cancellationToken">Token used to abort the operation.</param>

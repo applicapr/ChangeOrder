@@ -26,35 +26,34 @@ internal sealed class InMemoryChangeOrderRepository : IChangeOrderRepository
     public Task<DomainChangeOrder?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
         => _dbContext.ChangeOrders.FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
 
-    public async Task<IReadOnlyList<DomainChangeOrder>> ListAsync(PagedRequest request, CancellationToken cancellationToken)
+    public Task<DomainChangeOrder?> GetByIdAsNoTrackingAsync(Guid id, CancellationToken cancellationToken)
+        => _dbContext.ChangeOrders.AsNoTracking().FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
+
+    public async Task<(IReadOnlyList<DomainChangeOrder> Items, int Total)> ListPagedAsync(
+        PagedRequest request,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         int skip = (request.Page - 1) * request.PageSize;
-        IQueryable<DomainChangeOrder> query = _dbContext.ChangeOrders;
+        IQueryable<DomainChangeOrder> query = _dbContext.ChangeOrders.AsNoTracking();
         if (!string.IsNullOrEmpty(request.OrderNumberFilter))
         {
+            // InMemory provider does not translate EF.Functions.Like, so the
+            // test double keeps the StartsWith expression — production runs on
+            // SQL Server and uses LIKE via the real repository.
             string filter = request.OrderNumberFilter;
             query = query.Where(o => o.OrderNumber.Value.StartsWith(filter, StringComparison.Ordinal));
         }
+
+        int total = await query.CountAsync(cancellationToken);
 
         List<DomainChangeOrder> rows = await query
             .OrderByDescending(o => o.RequestDate)
             .Skip(skip)
             .Take(request.PageSize)
             .ToListAsync(cancellationToken);
-        return rows;
-    }
 
-    public Task<int> CountAsync(string? orderNumberFilter, CancellationToken cancellationToken)
-    {
-        IQueryable<DomainChangeOrder> query = _dbContext.ChangeOrders;
-        if (!string.IsNullOrEmpty(orderNumberFilter))
-        {
-            string filter = orderNumberFilter;
-            query = query.Where(o => o.OrderNumber.Value.StartsWith(filter, StringComparison.Ordinal));
-        }
-
-        return query.CountAsync(cancellationToken);
+        return (rows, total);
     }
 
     public async Task AddAsync(DomainChangeOrder order, CancellationToken cancellationToken)

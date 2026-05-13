@@ -34,16 +34,34 @@ public sealed class ChangeOrderRepository : IChangeOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<DomainChangeOrder>> ListAsync(PagedRequest request, CancellationToken cancellationToken)
+    public async Task<DomainChangeOrder?> GetByIdAsNoTrackingAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return await _dbContext.ChangeOrders
+            .AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == id, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<(IReadOnlyList<DomainChangeOrder> Items, int Total)> ListPagedAsync(
+        PagedRequest request,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         int skip = (request.Page - 1) * request.PageSize;
-        IQueryable<DomainChangeOrder> query = _dbContext.ChangeOrders;
+        IQueryable<DomainChangeOrder> query = _dbContext.ChangeOrders.AsNoTracking();
         if (!string.IsNullOrEmpty(request.OrderNumberFilter))
         {
-            string filter = request.OrderNumberFilter;
-            query = query.Where(o => o.OrderNumber.Value.StartsWith(filter));
+            // OrderNumber values follow the canonical "yyyyMMdd-##" form, so no LIKE
+            // metacharacter ('%', '_', '[') can appear in the filter — passing the
+            // raw prefix to EF.Functions.Like is safe.
+            string pattern = request.OrderNumberFilter + "%";
+            query = query.Where(o => EF.Functions.Like(o.OrderNumber.Value, pattern));
         }
+
+        int total = await query
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
 
         List<DomainChangeOrder> rows = await query
             .OrderByDescending(o => o.RequestDate)
@@ -51,22 +69,8 @@ public sealed class ChangeOrderRepository : IChangeOrderRepository
             .Take(request.PageSize)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
-        return rows;
-    }
 
-    /// <inheritdoc/>
-    public async Task<int> CountAsync(string? orderNumberFilter, CancellationToken cancellationToken)
-    {
-        IQueryable<DomainChangeOrder> query = _dbContext.ChangeOrders;
-        if (!string.IsNullOrEmpty(orderNumberFilter))
-        {
-            string filter = orderNumberFilter;
-            query = query.Where(o => o.OrderNumber.Value.StartsWith(filter));
-        }
-
-        return await query
-            .CountAsync(cancellationToken)
-            .ConfigureAwait(false);
+        return (rows, total);
     }
 
     /// <inheritdoc/>
@@ -86,21 +90,35 @@ public sealed class ChangeOrderRepository : IChangeOrderRepository
             WHERE  OrderNumber LIKE @datePrefix + '-%'
             """;
 
-        SqlParameter datePrefix = new("@datePrefix", prefix);
-        await using System.Data.Common.DbCommand command = _dbContext.Database.GetDbConnection().CreateCommand();
-        command.CommandText = Sql;
-        command.Transaction = _dbContext.Database.CurrentTransaction?.GetDbTransaction();
-        command.Parameters.Add(datePrefix);
+        IDbContextTransaction? currentTransaction = _dbContext.Database.CurrentTransaction;
 
-        await _dbContext.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        // When a transaction is already active on the DbContext, the underlying
+        // connection is open and bound to that transaction (research.md R-1).
+        // Calling OpenConnectionAsync/CloseConnectionAsync would bump EF Core's
+        // refcount and is unnecessary; we only manage the connection lifetime
+        // when the caller has NOT opened an explicit transaction (e.g. tests).
+        bool ownsConnectionLifetime = currentTransaction is null;
+        if (ownsConnectionLifetime)
+        {
+            await _dbContext.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         try
         {
+            await using System.Data.Common.DbCommand command = _dbContext.Database.GetDbConnection().CreateCommand();
+            command.CommandText = Sql;
+            command.Transaction = currentTransaction?.GetDbTransaction();
+            command.Parameters.Add(new SqlParameter("@datePrefix", prefix));
+
             object? scalar = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
             return scalar is null or DBNull ? 1 : Convert.ToInt32(scalar, CultureInfo.InvariantCulture);
         }
         finally
         {
-            await _dbContext.Database.CloseConnectionAsync().ConfigureAwait(false);
+            if (ownsConnectionLifetime)
+            {
+                await _dbContext.Database.CloseConnectionAsync().ConfigureAwait(false);
+            }
         }
     }
 

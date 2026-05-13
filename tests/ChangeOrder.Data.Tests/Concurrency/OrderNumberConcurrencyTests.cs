@@ -16,14 +16,17 @@ namespace ChangeOrder.Data.Tests.Concurrency;
 
 /// <summary>
 /// SC-001 integration test. Spins up a SQL Server Testcontainer, applies the
-/// EF Core migrations, and fires 100 concurrent <see cref="CreateOrderHandler"/>
+/// EF Core migrations, and fires 99 concurrent <see cref="CreateOrderHandler"/>
 /// invocations to verify R-1 (UPDLOCK + HOLDLOCK + UNIQUE retry) actually
-/// yields 100 distinct OrderNumbers with zero failures.
+/// yields 99 distinct OrderNumbers with zero failures. The domain value object
+/// <c>OrderNumber</c> caps the daily sequence at 99 (format <c>yyyyMMdd-NN</c>,
+/// NN in 01..99), so 99 is the maximum count provable in a single-day run.
 /// </summary>
 [Trait("Category", "Testcontainers")]
 public sealed class OrderNumberConcurrencyTests : IAsyncLifetime
 {
-    private const int ConcurrentRequestCount = 100;
+    // Domain max: OrderNumber supports NN in 01..99 per day (yyyyMMdd-NN).
+    private const int ConcurrentRequestCount = 99;
 
     private MsSqlContainer? _container;
     private bool _dockerAvailable;
@@ -53,7 +56,7 @@ public sealed class OrderNumberConcurrencyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task HundredConcurrentCreates_Produce100DistinctOrderNumbers()
+    public async Task NinetyNineConcurrentCreates_Produce99DistinctOrderNumbers()
     {
         if (!_dockerAvailable || _container is null)
         {

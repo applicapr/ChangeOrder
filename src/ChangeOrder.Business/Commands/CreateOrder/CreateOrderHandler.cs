@@ -104,8 +104,19 @@ public sealed partial class CreateOrderHandler : ICommandHandler<CreateOrderComm
         DateTime nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
         DateOnly today = DateOnly.FromDateTime(nowUtc);
 
+        Result<CreateOrderResult, Error> lastFailure = Result<CreateOrderResult, Error>
+            .Failure(DomainErrors.Order.DailySequenceExhausted(today));
+
         for (int attempt = 1; attempt <= MaxRetryAttempts; attempt++)
         {
+            // R-1: the UPDLOCK+HOLDLOCK read in GetNextSequenceForDateAsync and
+            // the INSERT must share the same physical transaction so the row
+            // lock is held across both statements. Each retry opens a fresh
+            // transaction; the `await using` ensures rollback on failure paths.
+            await using IUnitOfWorkTransaction transaction = await _unitOfWork
+                .BeginTransactionAsync(cancellationToken)
+                .ConfigureAwait(false);
+
             Result<OrderNumber, Error> numberResult = await _orderNumberGenerator
                 .GenerateAsync(today, cancellationToken)
                 .ConfigureAwait(false);
@@ -127,13 +138,18 @@ public sealed partial class CreateOrderHandler : ICommandHandler<CreateOrderComm
 
             if (saveResult.IsSuccess)
             {
+                await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
                 return Result<CreateOrderResult, Error>.Success(new CreateOrderResult(order, WasReplay: false));
             }
 
+            // SaveChangesWithDuplicateDetectionAsync already cleared the tracker.
+            // Leaving the using-scope rolls back the transaction so the next
+            // attempt re-reads the MAX(sequence) under a fresh lock.
             LogUniqueCollision(attempt, MaxRetryAttempts, numberResult.Value!.Value);
+            lastFailure = Result<CreateOrderResult, Error>.Failure(saveResult.Error!);
         }
 
-        return Result<CreateOrderResult, Error>.Failure(DomainErrors.Order.DailySequenceExhausted(today));
+        return lastFailure;
     }
 
     private static DomainChangeOrder BuildOrder(OrderNumber orderNumber, CreateOrderCommand command, DateTime nowUtc)

@@ -24,7 +24,7 @@ public sealed class GetOrderByIdHandlerTests
     {
         DomainChangeOrder order = BuildOrder();
         IChangeOrderRepository repository = Substitute.For<IChangeOrderRepository>();
-        repository.GetByIdAsync(order.Id, Arg.Any<CancellationToken>())
+        repository.GetByIdAsNoTrackingAsync(order.Id, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<DomainChangeOrder?>(order));
 
         GetOrderByIdHandler handler = new(repository);
@@ -40,7 +40,7 @@ public sealed class GetOrderByIdHandlerTests
     public async Task HandleAsync_MissingOrder_ReturnsNotFound()
     {
         IChangeOrderRepository repository = Substitute.For<IChangeOrderRepository>();
-        repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+        repository.GetByIdAsNoTrackingAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<DomainChangeOrder?>(null));
 
         GetOrderByIdHandler handler = new(repository);

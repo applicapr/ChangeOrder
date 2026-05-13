@@ -12,14 +12,23 @@ public interface IChangeOrderRepository
     /// <summary>Loads a single order by id; returns <c>null</c> when not found or soft-deleted.</summary>
     public Task<DomainChangeOrder?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
 
-    /// <summary>Returns a single page of non-deleted orders.</summary>
-    public Task<IReadOnlyList<DomainChangeOrder>> ListAsync(PagedRequest request, CancellationToken cancellationToken);
+    /// <summary>
+    /// Loads a single order by id for read-only consumption (no change tracking);
+    /// returns <c>null</c> when not found or soft-deleted. Use this from query
+    /// handlers; command handlers that mutate the aggregate must use
+    /// <see cref="GetByIdAsync"/> instead.
+    /// </summary>
+    public Task<DomainChangeOrder?> GetByIdAsNoTrackingAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Total count of non-deleted orders, optionally filtered by
-    /// <paramref name="orderNumberFilter"/> as a prefix on <c>OrderNumber</c>.
+    /// Returns a page of non-deleted orders together with the total row count
+    /// for the same predicate, computed in a single query plan to avoid the
+    /// duplicate predicate construction that an independent List+Count pair
+    /// would incur.
     /// </summary>
-    public Task<int> CountAsync(string? orderNumberFilter, CancellationToken cancellationToken);
+    public Task<(IReadOnlyList<DomainChangeOrder> Items, int Total)> ListPagedAsync(
+        PagedRequest request,
+        CancellationToken cancellationToken);
 
     /// <summary>Adds a new order to the change tracker; commit happens through <see cref="IUnitOfWork"/>.</summary>
     public Task AddAsync(DomainChangeOrder order, CancellationToken cancellationToken);
