@@ -1,3 +1,4 @@
+using System.Reflection;
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using ChangeOrder.Business.Abstractions;
@@ -12,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Hosting;
 
 namespace ChangeOrder.Presentation.Extensions;
 
@@ -27,6 +29,36 @@ public static class EndpointRouteBuilderExtensions
 
     private const int IdempotencyKeyMinLength = 8;
     private const int IdempotencyKeyMaxLength = 64;
+
+    private const string ServiceName = "ChangeOrder.Api";
+
+    /// <summary>
+    /// Maps the global <c>GET /version</c> endpoint. Lives outside the
+    /// versioned <c>/api/v{version}</c> group so monitoring tools can probe
+    /// the build identity without negotiating an API version.
+    /// </summary>
+    public static IEndpointRouteBuilder MapVersionEndpoint(this IEndpointRouteBuilder endpoints)
+    {
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        endpoints.MapGet("/version", (IHostEnvironment env) =>
+        {
+            string informational = Assembly.GetEntryAssembly()?
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion ?? "unknown";
+            int plusIndex = informational.IndexOf('+', StringComparison.Ordinal);
+            string version = plusIndex < 0 ? informational : informational[..plusIndex];
+
+            return TypedResults.Ok(new VersionResponse(
+                Name: ServiceName,
+                Version: version,
+                Environment: env.EnvironmentName));
+        })
+        .WithName("getVersion")
+        .WithTags("meta");
+
+        return endpoints;
+    }
 
     /// <summary>Maps the change-order routes onto <paramref name="endpoints"/>.</summary>
     public static IEndpointRouteBuilder MapChangeOrderApi(this IEndpointRouteBuilder endpoints)

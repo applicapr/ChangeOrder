@@ -201,6 +201,7 @@ Onion layout fixed by `.specify/memory/constitution.md` v1.0.0:
 - [ ] T086 [P] Add `src/ChangeOrder.Host/BackgroundServices/IdempotencyCleanupService.cs` — `BackgroundService` running every hour, deleting `IdempotencyKeys` rows older than 24h (per research.md R-2)
 - [ ] T087 [P] Add Serilog enrichers (correlation id, environment) and the production sink configuration in `appsettings.Production.json`
 - [ ] T088 [P] Add the rate-limit policy customization (1-minute fixed window, 100 permits per IP) registered in `AddPresentationLayer` per research.md R-7; `Retry-After` header emitted on rejection
+- [X] T088a [P] Add `GET /version` operational endpoint (global, outside the `/api/v{version}` group). Returns `{ name, version, environment }` sourced from `Directory.Build.props` `<Version>` via `AssemblyInformationalVersionAttribute`. Mapped from `EndpointRouteBuilderExtensions.MapVersionEndpoint`, tag `meta`, schema in `contracts/openapi.yaml`. Test: `VersionEndpointTests.Get_Version_Returns200WithIdentityPayload`
 - [ ] T089 [P] Add XML doc comments on every public endpoint and DTO so the generated OpenAPI matches `contracts/openapi.yaml`
 - [ ] T090 [P] Verify (via a CI step or pre-commit script) that no `.cs` file exceeds 500 lines (constitution Quality bar gate)
 - [ ] T091 [P] `tests/ChangeOrder.Presentation.Tests/RateLimitTests.cs` — exercises SC-005: the 101st request within a minute returns HTTP 429 within 50 ms with a `Retry-After` header

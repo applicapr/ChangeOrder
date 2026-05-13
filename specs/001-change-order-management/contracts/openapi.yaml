@@ -21,8 +21,27 @@ tags:
     description: Endpoints that drive an order through its lifecycle
   - name: health
     description: Operational endpoints
+  - name: meta
+    description: Service identity and build metadata
 
 paths:
+  /version:
+    get:
+      tags: [meta]
+      summary: Service identity and version
+      description: |
+        Returns the running service name, semantic version and hosting environment.
+        Lives outside the versioned `/api/v{version}` group so that monitoring
+        tools can probe the build identity without negotiating an API version.
+      operationId: getVersion
+      responses:
+        "200":
+          description: Service identity payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionResponse"
+
   /health:
     get:
       tags: [health]
@@ -367,6 +386,22 @@ components:
         totalCount: { type: integer, minimum: 0 }
         page:       { type: integer, minimum: 1 }
         pageSize:   { type: integer, minimum: 1, maximum: 50 }
+    VersionResponse:
+      type: object
+      required: [name, version, environment]
+      properties:
+        name:
+          type: string
+          description: Logical service name.
+          example: ChangeOrder.Api
+        version:
+          type: string
+          description: Semantic version of the running build (any `+sha` suffix stripped).
+          example: 1.0.0
+        environment:
+          type: string
+          description: Hosting environment name (`Development`, `Staging`, `Production`, ...).
+          example: Development
     HealthReport:
       type: object
       required: [status]

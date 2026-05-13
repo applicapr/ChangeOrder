@@ -18,6 +18,13 @@
     <AnalysisMode>Recommended</AnalysisMode>
 
     <!--
+      Product version surfaced by `GET /version` (see openapi.yaml).
+      Propagates to AssemblyVersion, AssemblyFileVersion and
+      AssemblyInformationalVersion across every project in the solution.
+    -->
+    <Version>1.0.0</Version>
+
+    <!--
       Silence CS1591 "Missing XML comment for publicly visible type or member"
       at the repo level. We still GenerateDocumentationFile=true so the .xml
       ships next to the assembly, but we don't want every internal helper to

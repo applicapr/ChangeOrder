@@ -74,6 +74,7 @@ public partial class Program
             app.UseSerilogRequestLogging();
             app.UseRateLimiter();
             app.MapHealthChecks("/health");
+            app.MapVersionEndpoint();
             app.MapChangeOrderApi();
 
             app.Run();
