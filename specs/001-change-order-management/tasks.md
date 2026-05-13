@@ -147,18 +147,18 @@ Onion layout fixed by `.specify/memory/constitution.md` v1.0.0:
 
 ### Implementation for User Story 2
 
-- [ ] T063 [P] [US2] Add `src/ChangeOrder.Business/Commands/RecordApproval/RecordApprovalCommand.cs` — record with `OrderId`, `Level` (enum: `Requester`/`DepartmentHead`/`ItHead`/`ProgrammingDivision`), `Verdict`
-- [ ] T064 [US2] Add `src/ChangeOrder.Business/Commands/RecordApproval/RecordApprovalHandler.cs` — loads order, applies verdict to the right slot, evaluates whether all four are `Approved` (transition `PendingApproval → Approved`); returns `Result<TVoid, Error>` with `InvalidStateTransition` if the order is not in an approval-accepting state
-- [ ] T065 [P] [US2] Add `src/ChangeOrder.Business/Commands/RecordMilestoneDates/RecordMilestoneDatesCommand.cs` — nullable `DeliveryDate`, `InitialEvaluationDate`, `ProductionDeployDate`, `PostDeployScreenshotPath`
-- [ ] T066 [US2] Add `src/ChangeOrder.Business/Commands/RecordMilestoneDates/RecordMilestoneDatesHandler.cs` — applies provided dates, drives transitions: setting `DeliveryDate` while `Approved` → `InProgress`; setting `ProductionDeployDate` while `InProgress` → `Deployed`; rejects out-of-order updates with `InvalidStateTransition`
-- [ ] T067 [P] [US2] Add `src/ChangeOrder.Presentation/DTOs/Requests/ApprovalVerdictRequest.cs` and `MilestoneDatesRequest.cs` matching the OpenAPI schemas
-- [ ] T068 [US2] Extend `EndpointRouteBuilderExtensions.MapChangeOrderApi` with `PUT /{id}/approvals/{level}` and `PATCH /{id}/dates` per `openapi.yaml`; both return 204 on success, 404 if not found, 409 on illegal transition
+- [X] T063 [P] [US2] Add `src/ChangeOrder.Business/Commands/RecordApproval/RecordApprovalCommand.cs` — record with `OrderId`, `Level` (enum: `Requester`/`DepartmentHead`/`ItHead`/`ProgrammingDivision`), `Verdict`
+- [X] T064 [US2] Add `src/ChangeOrder.Business/Commands/RecordApproval/RecordApprovalHandler.cs` — loads order, applies verdict to the right slot, evaluates whether all four are `Approved` (transition `PendingApproval → Approved`); returns `Result<TVoid, Error>` with `InvalidStateTransition` if the order is not in an approval-accepting state
+- [X] T065 [P] [US2] Add `src/ChangeOrder.Business/Commands/RecordMilestoneDates/RecordMilestoneDatesCommand.cs` — nullable `DeliveryDate`, `InitialEvaluationDate`, `ProductionDeployDate`, `PostDeployScreenshotPath`
+- [X] T066 [US2] Add `src/ChangeOrder.Business/Commands/RecordMilestoneDates/RecordMilestoneDatesHandler.cs` — applies provided dates, drives transitions: setting `DeliveryDate` while `Approved` → `InProgress`; setting `ProductionDeployDate` while `InProgress` → `Deployed`; rejects out-of-order updates with `InvalidStateTransition`
+- [X] T067 [P] [US2] Add `src/ChangeOrder.Presentation/DTOs/Requests/ApprovalVerdictRequest.cs` and `MilestoneDatesRequest.cs` matching the OpenAPI schemas
+- [X] T068 [US2] Extend `EndpointRouteBuilderExtensions.MapChangeOrderApi` with `PUT /{id}/approvals/{level}` and `PATCH /{id}/dates` per `openapi.yaml`; both return 204 on success, 404 if not found, 409 on illegal transition
 
 ### Tests for User Story 2
 
-- [ ] T069 [P] [US2] `tests/ChangeOrder.Business.Tests/Commands/RecordApproval/RecordApprovalHandlerTests.cs` — every combination of `(currentChain, level, verdict)` exercising the state machine; covers SC-006 (illegal-transition tests)
-- [ ] T070 [P] [US2] `tests/ChangeOrder.Business.Tests/Commands/RecordMilestoneDates/RecordMilestoneDatesHandlerTests.cs` — Approved → InProgress on delivery date; InProgress → Deployed on production deploy date; rejects setting `ProductionDeployDate` while still `Approved`
-- [ ] T071 [P] [US2] `tests/ChangeOrder.Presentation.Tests/Endpoints/WorkflowEndpointsTests.cs` — end-to-end: full approval chain to Deployed, plus rejection variants returning 409
+- [X] T069 [P] [US2] `tests/ChangeOrder.Business.Tests/Commands/RecordApproval/RecordApprovalHandlerTests.cs` — every combination of `(currentChain, level, verdict)` exercising the state machine; covers SC-006 (illegal-transition tests)
+- [X] T070 [P] [US2] `tests/ChangeOrder.Business.Tests/Commands/RecordMilestoneDates/RecordMilestoneDatesHandlerTests.cs` — Approved → InProgress on delivery date; InProgress → Deployed on production deploy date; rejects setting `ProductionDeployDate` while still `Approved`
+- [X] T071 [P] [US2] `tests/ChangeOrder.Presentation.Tests/Endpoints/WorkflowEndpointsTests.cs` — end-to-end: full approval chain to Deployed, plus rejection variants returning 409
 
 **Checkpoint**: US1 + US2 working independently and together. A submitter can create + approve + deploy an order end to end.
 

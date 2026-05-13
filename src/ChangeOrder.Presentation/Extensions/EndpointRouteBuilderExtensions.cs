@@ -3,6 +3,8 @@ using Asp.Versioning;
 using Asp.Versioning.Builder;
 using ChangeOrder.Business.Abstractions;
 using ChangeOrder.Business.Commands.CreateOrder;
+using ChangeOrder.Business.Commands.RecordApproval;
+using ChangeOrder.Business.Commands.RecordMilestoneDates;
 using ChangeOrder.Domain.Errors;
 using ChangeOrder.Presentation.Common;
 using ChangeOrder.Presentation.DTOs.Requests;
@@ -19,8 +21,9 @@ namespace ChangeOrder.Presentation.Extensions;
 
 /// <summary>
 /// Minimal-API endpoint mapping for the <c>/api/v1/change-orders</c> group.
-/// US1 (Create) is implemented; the rest of the verbs remain stubbed at
-/// 501 Not Implemented until their user stories are tackled.
+/// US1 (Create) and US2 (Approval workflow + milestone dates) are implemented;
+/// the US3 verbs (list, get, update, delete) remain stubbed at 501 Not
+/// Implemented until their user story is tackled.
 /// </summary>
 public static class EndpointRouteBuilderExtensions
 {
@@ -122,17 +125,33 @@ public static class EndpointRouteBuilderExtensions
             .WithDescription("Not implemented yet — returns 501. Planned for User Story 3 (T072-T086).")
             .Produces(StatusCodes.Status501NotImplemented);
 
-        group.MapPut("/{id:guid}/approvals/{level}", RecordApprovalStub)
+        group.MapPut("/{id:guid}/approvals/{level}", RecordApprovalAsync)
             .WithName("recordApproval")
             .WithSummary("Record an approval verdict for one of the four chain levels")
-            .WithDescription("Not implemented yet — returns 501. Planned for User Story 2 (T063-T071).")
-            .Produces(StatusCodes.Status501NotImplemented);
+            .WithDescription(
+                "Records a verdict (`Pending` | `Approved` | `Rejected`) on one of the four " +
+                "approval slots: `requester`, `departmentHead`, `itHead`, `programmingDivision`. " +
+                "When all four are `Approved` the order advances `PendingApproval → Approved`. " +
+                "Returns 204 on success, 404 when the order does not exist, 409 on illegal " +
+                "transitions, and 400 on validation errors (unknown level / verdict).")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
-        group.MapPatch("/{id:guid}/dates", RecordMilestoneDatesStub)
+        group.MapPatch("/{id:guid}/dates", RecordMilestoneDatesAsync)
             .WithName("recordMilestoneDates")
             .WithSummary("Record milestone dates (delivery, evaluation, production deploy)")
-            .WithDescription("Not implemented yet — returns 501. Planned for User Story 2 (T063-T071).")
-            .Produces(StatusCodes.Status501NotImplemented);
+            .WithDescription(
+                "Records one or more milestone dates. Setting `deliveryDate` while in " +
+                "`Approved` advances the order to `InProgress`; setting `productionDeployDate` " +
+                "while in `InProgress` advances it to `Deployed`. Out-of-order updates return " +
+                "409 (`order.invalid_transition`).")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         return endpoints;
     }
@@ -208,6 +227,60 @@ public static class EndpointRouteBuilderExtensions
         return TypedResults.Problem(problem);
     }
 
+    private static async Task<IResult> RecordApprovalAsync(
+        Guid id,
+        string level,
+        ApprovalVerdictRequest request,
+        HttpContext httpContext,
+        ICommandHandler<RecordApprovalCommand, Result<TVoid, Error>> handler,
+        CancellationToken cancellationToken)
+    {
+        if (request is null)
+        {
+            return BadRequest("validation.error", "Request body is required.");
+        }
+
+        Result<RecordApprovalCommand, Error> mapped = request.ToCommand(id, level);
+        if (mapped.IsFailure)
+        {
+            ProblemDetails validationProblem = ProblemDetailsFactory.FromError(mapped.Error!, httpContext.Request.Path);
+            return TypedResults.Problem(validationProblem);
+        }
+
+        Result<TVoid, Error> result = await handler.HandleAsync(mapped.Value!, cancellationToken);
+        if (result.IsFailure)
+        {
+            ProblemDetails problem = ProblemDetailsFactory.FromError(result.Error!, httpContext.Request.Path);
+            return TypedResults.Problem(problem);
+        }
+
+        return TypedResults.NoContent();
+    }
+
+    private static async Task<IResult> RecordMilestoneDatesAsync(
+        Guid id,
+        MilestoneDatesRequest request,
+        HttpContext httpContext,
+        ICommandHandler<RecordMilestoneDatesCommand, Result<TVoid, Error>> handler,
+        CancellationToken cancellationToken)
+    {
+        if (request is null)
+        {
+            return BadRequest("validation.error", "Request body is required.");
+        }
+
+        RecordMilestoneDatesCommand command = request.ToCommand(id);
+        Result<TVoid, Error> result = await handler.HandleAsync(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            ProblemDetails problem = ProblemDetailsFactory.FromError(result.Error!, httpContext.Request.Path);
+            return TypedResults.Problem(problem);
+        }
+
+        return TypedResults.NoContent();
+    }
+
     private static StatusCodeHttpResult ListChangeOrdersStub(HttpContext context) =>
         TypedResults.StatusCode(StatusCodes.Status501NotImplemented);
 
@@ -218,11 +291,5 @@ public static class EndpointRouteBuilderExtensions
         TypedResults.StatusCode(StatusCodes.Status501NotImplemented);
 
     private static StatusCodeHttpResult DeleteChangeOrderStub(Guid id) =>
-        TypedResults.StatusCode(StatusCodes.Status501NotImplemented);
-
-    private static StatusCodeHttpResult RecordApprovalStub(Guid id, string level) =>
-        TypedResults.StatusCode(StatusCodes.Status501NotImplemented);
-
-    private static StatusCodeHttpResult RecordMilestoneDatesStub(Guid id) =>
         TypedResults.StatusCode(StatusCodes.Status501NotImplemented);
 }
