@@ -63,3 +63,6 @@ CLAUDE.md
 
 # macOS Finder metadata
 .DS_Store
+
+# Docker Compose local environment (per-developer, contains SA_PASSWORD — no commit)
+.env
