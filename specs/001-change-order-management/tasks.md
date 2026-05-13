@@ -54,57 +54,57 @@ Onion layout fixed by `.specify/memory/constitution.md` v1.0.0:
 
 ### Domain plumbing (shared by all stories)
 
-- [ ] T014 [P] Add `src/ChangeOrder.Domain/Errors/Error.cs` — sealed record `Error(string Code, string Message)`
-- [ ] T015 [P] Add `src/ChangeOrder.Domain/Errors/Result.cs` — sealed generic record `Result<TValue, TError>` with `Success`/`Failure` factories per research.md R-5
-- [ ] T016 Add `src/ChangeOrder.Domain/Errors/DomainErrors.cs` — static class with nested `Order` and `Idempotency` classes producing every error code referenced in `openapi.yaml` (`order.not_found`, `order.duplicate_number`, `order.invalid_transition`, `order.edit_after_draft`, `order.daily_sequence_exhausted`, `order.concurrency_conflict`, `idempotency.payload_divergence`)
-- [ ] T017 [P] Add `src/ChangeOrder.Domain/Enums/OrderStatus.cs` — values: `Draft`, `PendingApproval`, `Approved`, `InProgress`, `Deployed`, `Cancelled`
-- [ ] T018 [P] Add `src/ChangeOrder.Domain/Enums/ApprovalStatus.cs` — values: `Pending`, `Approved`, `Rejected`
-- [ ] T019 [P] Add `src/ChangeOrder.Domain/Abstractions/ISoftDeletable.cs` — `bool IsDeleted` + `DateTime? DeletedAt`
-- [ ] T020 [P] Add `src/ChangeOrder.Domain/Abstractions/IAuditable.cs` — `DateTime CreatedAt` + `DateTime? UpdatedAt`
-- [ ] T021 [P] Add `src/ChangeOrder.Domain/Abstractions/IUnitOfWork.cs` — `Task<int> SaveChangesAsync(CancellationToken)`
-- [ ] T022 [P] Add `src/ChangeOrder.Domain/ValueObjects/OrderNumber.cs` — sealed record, private ctor, `Create(DateOnly date, int sequence)` factory returning `Result<OrderNumber, Error>`, format `yyyyMMdd-##`, validates `sequence ∈ [1..99]`
-- [ ] T023 [P] Add `src/ChangeOrder.Domain/ValueObjects/RequesterInfo.cs` — sealed record with `Name`, `Position`, `Department`, `Email`
-- [ ] T024 [P] Add `src/ChangeOrder.Domain/ValueObjects/ApprovalChain.cs` — sealed record with the four approval slots, helper `AllApproved()`
-- [ ] T025 Add `src/ChangeOrder.Domain/Entities/ChangeOrder.cs` — aggregate root implementing `ISoftDeletable` + `IAuditable`, encapsulating OrderNumber + Requester + ApprovalChain + Status + milestone dates, exposing a `RowVersion` `byte[]` property for optimistic concurrency (FR-013), with state-transition method(s) returning `Result<TVoid, Error>` per data-model.md §8
-- [ ] T026 [P] Add `src/ChangeOrder.Domain/Entities/IdempotencyKey.cs` — entity with `Key`, `OrderId`, `RequestHash`, `CreatedAt` (NOT auditable, NOT soft-deletable; documented in data-model.md §6)
-- [ ] T027 Add `src/ChangeOrder.Domain/Abstractions/IChangeOrderRepository.cs` — methods: `GetByIdAsync`, `ListAsync(PagedRequest)`, `AddAsync`, `GetNextSequenceForDateAsync(DateOnly)`, `FindIdempotencyAsync(string key)`
-- [ ] T028 [P] Add `src/ChangeOrder.Domain/Extensions/ServiceCollectionExtensions.cs` — `AddDomain(this IServiceCollection)` stub (Domain has no DI today, kept for symmetry)
+- [X] T014 [P] Add `src/ChangeOrder.Domain/Errors/Error.cs` — sealed record `Error(string Code, string Message)`
+- [X] T015 [P] Add `src/ChangeOrder.Domain/Errors/Result.cs` — sealed generic record `Result<TValue, TError>` with `Success`/`Failure` factories per research.md R-5
+- [X] T016 Add `src/ChangeOrder.Domain/Errors/DomainErrors.cs` — static class with nested `Order` and `Idempotency` classes producing every error code referenced in `openapi.yaml` (`order.not_found`, `order.duplicate_number`, `order.invalid_transition`, `order.edit_after_draft`, `order.daily_sequence_exhausted`, `order.concurrency_conflict`, `idempotency.payload_divergence`)
+- [X] T017 [P] Add `src/ChangeOrder.Domain/Enums/OrderStatus.cs` — values: `Draft`, `PendingApproval`, `Approved`, `InProgress`, `Deployed`, `Cancelled`
+- [X] T018 [P] Add `src/ChangeOrder.Domain/Enums/ApprovalStatus.cs` — values: `Pending`, `Approved`, `Rejected`
+- [X] T019 [P] Add `src/ChangeOrder.Domain/Abstractions/ISoftDeletable.cs` — `bool IsDeleted` + `DateTime? DeletedAt`
+- [X] T020 [P] Add `src/ChangeOrder.Domain/Abstractions/IAuditable.cs` — `DateTime CreatedAt` + `DateTime? UpdatedAt`
+- [X] T021 [P] Add `src/ChangeOrder.Domain/Abstractions/IUnitOfWork.cs` — `Task<int> SaveChangesAsync(CancellationToken)`
+- [X] T022 [P] Add `src/ChangeOrder.Domain/ValueObjects/OrderNumber.cs` — sealed record, private ctor, `Create(DateOnly date, int sequence)` factory returning `Result<OrderNumber, Error>`, format `yyyyMMdd-##`, validates `sequence ∈ [1..99]`
+- [X] T023 [P] Add `src/ChangeOrder.Domain/ValueObjects/RequesterInfo.cs` — sealed record with `Name`, `Position`, `Department`, `Email`
+- [X] T024 [P] Add `src/ChangeOrder.Domain/ValueObjects/ApprovalChain.cs` — sealed record with the four approval slots, helper `AllApproved()`
+- [X] T025 Add `src/ChangeOrder.Domain/Entities/ChangeOrder.cs` — aggregate root implementing `ISoftDeletable` + `IAuditable`, encapsulating OrderNumber + Requester + ApprovalChain + Status + milestone dates, exposing a `RowVersion` `byte[]` property for optimistic concurrency (FR-013), with state-transition method(s) returning `Result<TVoid, Error>` per data-model.md §8
+- [X] T026 [P] Add `src/ChangeOrder.Domain/Entities/IdempotencyKey.cs` — entity with `Key`, `OrderId`, `RequestHash`, `CreatedAt` (NOT auditable, NOT soft-deletable; documented in data-model.md §6)
+- [X] T027 Add `src/ChangeOrder.Domain/Abstractions/IChangeOrderRepository.cs` — methods: `GetByIdAsync`, `ListAsync(PagedRequest)`, `AddAsync`, `GetNextSequenceForDateAsync(DateOnly)`, `FindIdempotencyAsync(string key)`
+- [X] T028 [P] Add `src/ChangeOrder.Domain/Extensions/ServiceCollectionExtensions.cs` — `AddDomain(this IServiceCollection)` stub (Domain has no DI today, kept for symmetry)
 
 ### Data plumbing
 
-- [ ] T029 Add `src/ChangeOrder.Data/Persistence/ApplicationDbContext.cs` — `DbSet<ChangeOrder>`, `DbSet<IdempotencyKey>`, configured with the global query filter for soft delete
-- [ ] T030 [P] Add `src/ChangeOrder.Data/Configurations/ChangeOrderConfiguration.cs` — table `dbo.ChangeOrders`, all columns per data-model.md §1, UNIQUE INDEX `IX_ChangeOrders_OrderNumber`, non-clustered indexes on `RequestDate`, `Status`, `IsDeleted`, OwnsOne mappings for the three value objects, `Property(e => e.RowVersion).IsRowVersion()` for FR-013 concurrency token
-- [ ] T031 [P] Add `src/ChangeOrder.Data/Configurations/IdempotencyKeyConfiguration.cs` — table `dbo.IdempotencyKeys`, PK on `Key`, FK to `ChangeOrders.Id` with `Restrict` delete behavior, index on `CreatedAt`
-- [ ] T032 Add `src/ChangeOrder.Data/Interceptors/AuditInterceptor.cs` — implements `ISaveChangesInterceptor` per research.md R-4, single writer of audit/soft-delete columns
-- [ ] T033 Add `src/ChangeOrder.Data/Repositories/ChangeOrderRepository.cs` — sealed class implementing `IChangeOrderRepository`. The `GetNextSequenceForDateAsync` method uses the `UPDLOCK + HOLDLOCK` raw-SQL strategy from research.md R-1; ALL `await`s use `.ConfigureAwait(false)`
-- [ ] T034 Add `src/ChangeOrder.Data/Repositories/UnitOfWork.cs` — sealed wrapper for `ApplicationDbContext.SaveChangesAsync`
-- [ ] T035 Add `src/ChangeOrder.Data/Extensions/ServiceCollectionExtensions.cs` — `AddDataLayer(this IServiceCollection, IConfiguration)` registers `DbContext` (with `AuditInterceptor`), repositories and `IUnitOfWork`
-- [ ] T036 Add the EF Core migration `InitialCreate` via `dotnet ef migrations add InitialCreate --project src/ChangeOrder.Data --startup-project src/ChangeOrder.Host`; verify it creates both tables, the unique index, the three non-clustered indexes and the FK with the correct names
+- [X] T029 Add `src/ChangeOrder.Data/Persistence/ApplicationDbContext.cs` — `DbSet<ChangeOrder>`, `DbSet<IdempotencyKey>`, configured with the global query filter for soft delete
+- [X] T030 [P] Add `src/ChangeOrder.Data/Configurations/ChangeOrderConfiguration.cs` — table `dbo.ChangeOrders`, all columns per data-model.md §1, UNIQUE INDEX `IX_ChangeOrders_OrderNumber`, non-clustered indexes on `RequestDate`, `Status`, `IsDeleted`, OwnsOne mappings for the three value objects, `Property(e => e.RowVersion).IsRowVersion()` for FR-013 concurrency token
+- [X] T031 [P] Add `src/ChangeOrder.Data/Configurations/IdempotencyKeyConfiguration.cs` — table `dbo.IdempotencyKeys`, PK on `Key`, FK to `ChangeOrders.Id` with `Restrict` delete behavior, index on `CreatedAt`
+- [X] T032 Add `src/ChangeOrder.Data/Interceptors/AuditInterceptor.cs` — implements `ISaveChangesInterceptor` per research.md R-4, single writer of audit/soft-delete columns
+- [X] T033 Add `src/ChangeOrder.Data/Repositories/ChangeOrderRepository.cs` — sealed class implementing `IChangeOrderRepository`. The `GetNextSequenceForDateAsync` method uses the `UPDLOCK + HOLDLOCK` raw-SQL strategy from research.md R-1; ALL `await`s use `.ConfigureAwait(false)`
+- [X] T034 Add `src/ChangeOrder.Data/Repositories/UnitOfWork.cs` — sealed wrapper for `ApplicationDbContext.SaveChangesAsync`
+- [X] T035 Add `src/ChangeOrder.Data/Extensions/ServiceCollectionExtensions.cs` — `AddDataLayer(this IServiceCollection, IConfiguration)` registers `DbContext` (with `AuditInterceptor`), repositories and `IUnitOfWork`
+- [X] T036 Add the EF Core migration `InitialCreate` via `dotnet ef migrations add InitialCreate --project src/ChangeOrder.Data --startup-project src/ChangeOrder.Host`; verify it creates both tables, the unique index, the three non-clustered indexes and the FK with the correct names
 
 ### Business plumbing
 
-- [ ] T037 [P] Add `src/ChangeOrder.Business/Abstractions/ICommandHandler.cs` — `ICommandHandler<TCommand, TResult>` with `Task<TResult> HandleAsync(TCommand, CancellationToken)`
-- [ ] T038 [P] Add `src/ChangeOrder.Business/Abstractions/IQueryHandler.cs` — `IQueryHandler<TQuery, TResult>` with same shape
-- [ ] T039 [P] Add `src/ChangeOrder.Business/Common/PagedRequest.cs` and `Common/PagedResponse.cs` — records used by listing handlers
-- [ ] T040 Add `src/ChangeOrder.Business/Extensions/ServiceCollectionExtensions.cs` — `AddBusinessLayer(this IServiceCollection)` discovers and registers every `ICommandHandler<,>` / `IQueryHandler<,>` in the assembly
+- [X] T037 [P] Add `src/ChangeOrder.Business/Abstractions/ICommandHandler.cs` — `ICommandHandler<TCommand, TResult>` with `Task<TResult> HandleAsync(TCommand, CancellationToken)`
+- [X] T038 [P] Add `src/ChangeOrder.Business/Abstractions/IQueryHandler.cs` — `IQueryHandler<TQuery, TResult>` with same shape
+- [X] T039 [P] Add `src/ChangeOrder.Business/Common/PagedRequest.cs` and `Common/PagedResponse.cs` — records used by listing handlers
+- [X] T040 Add `src/ChangeOrder.Business/Extensions/ServiceCollectionExtensions.cs` — `AddBusinessLayer(this IServiceCollection)` discovers and registers every `ICommandHandler<,>` / `IQueryHandler<,>` in the assembly
 
 ### Presentation plumbing
 
-- [ ] T041 [P] Add `src/ChangeOrder.Presentation/Common/ProblemDetailsFactory.cs` — translates `Error` codes to RFC 7807 `ProblemDetails` payloads (one place to evolve the mapping)
-- [ ] T042 Add `src/ChangeOrder.Presentation/Extensions/ServiceCollectionExtensions.cs` — `AddPresentationLayer(this IServiceCollection)` registers API versioning, rate limiting (fixed window 100/min per IP per research.md R-7), OpenAPI generator
-- [ ] T043 Add `src/ChangeOrder.Presentation/Extensions/EndpointRouteBuilderExtensions.cs` — `MapChangeOrderApi(this IEndpointRouteBuilder)` defines the `/api/v1/change-orders` group with versioning and rate-limit policy (endpoint method bodies stubbed; implementation per user-story phase)
+- [X] T041 [P] Add `src/ChangeOrder.Presentation/Common/ProblemDetailsFactory.cs` — translates `Error` codes to RFC 7807 `ProblemDetails` payloads (one place to evolve the mapping)
+- [X] T042 Add `src/ChangeOrder.Presentation/Extensions/ServiceCollectionExtensions.cs` — `AddPresentationLayer(this IServiceCollection)` registers API versioning, rate limiting (fixed window 100/min per IP per research.md R-7), OpenAPI generator
+- [X] T043 Add `src/ChangeOrder.Presentation/Extensions/EndpointRouteBuilderExtensions.cs` — `MapChangeOrderApi(this IEndpointRouteBuilder)` defines the `/api/v1/change-orders` group with versioning and rate-limit policy (endpoint method bodies stubbed; implementation per user-story phase)
 
 ### Host wiring
 
-- [ ] T044 Add `src/ChangeOrder.Host/Program.cs` — `WebApplication.CreateBuilder`, Serilog bootstrap (console + rolling file), `AddDomain → AddDataLayer → AddBusinessLayer → AddPresentationLayer → AddOpenApi → AddHealthChecks (SQL Server)`; mapping: `MapOpenApi` (Development only), `UseHttpsRedirection`, `UseRateLimiter`, `MapHealthChecks("/health")`, `MapChangeOrderApi`
-- [ ] T045 [P] Add `src/ChangeOrder.Host/appsettings.json` and `appsettings.Development.json` with the `DefaultConnection` connection string placeholder and Serilog config per quickstart.md
-- [ ] T046 Verify the application starts (`dotnet run --project src/ChangeOrder.Host`), `/health` returns 200 Healthy when SQL Server is up, and `/openapi/v1.json` is served in Development
+- [X] T044 Add `src/ChangeOrder.Host/Program.cs` — `WebApplication.CreateBuilder`, Serilog bootstrap (console + rolling file), `AddDomain → AddDataLayer → AddBusinessLayer → AddPresentationLayer → AddOpenApi → AddHealthChecks (SQL Server)`; mapping: `MapOpenApi` (Development only), `UseHttpsRedirection`, `UseRateLimiter`, `MapHealthChecks("/health")`, `MapChangeOrderApi`
+- [X] T045 [P] Add `src/ChangeOrder.Host/appsettings.json` and `appsettings.Development.json` with the `DefaultConnection` connection string placeholder and Serilog config per quickstart.md
+- [X] T046 Verify the application starts (`dotnet run --project src/ChangeOrder.Host`), `/health` returns 200 Healthy when SQL Server is up, and `/openapi/v1.json` is served in Development
 
 ### Foundational tests
 
-- [ ] T047 [P] Add `tests/ChangeOrder.Domain.Tests/ValueObjects/OrderNumberTests.cs` — `Create_WithValidSequence_ReturnsOrderNumber`, `Create_WithSequenceZero_FailsWithDailySequenceExhausted`, `Create_WithSequence100_FailsWithDailySequenceExhausted`, `Create_FormatsAsExpected`
-- [ ] T048 [P] Add `tests/ChangeOrder.Domain.Tests/Errors/DomainErrorsTests.cs` — sanity tests asserting every error factory returns the expected `Code`
-- [ ] T049 [P] Add `tests/ChangeOrder.Data.Tests/Interceptors/AuditInterceptorTests.cs` — uses EF Core In-Memory provider where possible; verifies `CreatedAt`/`UpdatedAt`/`DeletedAt`/`IsDeleted` are set automatically
+- [X] T047 [P] Add `tests/ChangeOrder.Domain.Tests/ValueObjects/OrderNumberTests.cs` — `Create_WithValidSequence_ReturnsOrderNumber`, `Create_WithSequenceZero_FailsWithDailySequenceExhausted`, `Create_WithSequence100_FailsWithDailySequenceExhausted`, `Create_FormatsAsExpected`
+- [X] T048 [P] Add `tests/ChangeOrder.Domain.Tests/Errors/DomainErrorsTests.cs` — sanity tests asserting every error factory returns the expected `Code`
+- [X] T049 [P] Add `tests/ChangeOrder.Data.Tests/Interceptors/AuditInterceptorTests.cs` — uses EF Core In-Memory provider where possible; verifies `CreatedAt`/`UpdatedAt`/`DeletedAt`/`IsDeleted` are set automatically
 
 **Checkpoint**: Foundation ready. The application boots, the database accepts `InitialCreate`, the test suite is green though sparse.
 

@@ -86,8 +86,18 @@ dotnet_diagnostic.CA1310.severity = warning
 # ConfigureAwait awareness handled at Code Review (no analyzer rule globally enabled here)
 
 ###############################
-# Test projects — relax XML docs
+# Test projects — relax XML docs + permit underscore-named methods
 ###############################
 [tests/**/*.cs]
 # Tests don't need XML docs on every public member
 dotnet_diagnostic.CS1591.severity = none
+# Convention: MethodUnderTest_Scenario_ExpectedResult (constitution §Testing stack)
+dotnet_diagnostic.CA1707.severity = none
+
+###############################
+# EF Core migrations — auto-generated; relax our style rules
+###############################
+[src/**/Migrations/*.cs]
+dotnet_diagnostic.IDE0161.severity = none
+dotnet_diagnostic.CS1591.severity = none
+generated_code = true

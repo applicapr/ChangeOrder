@@ -13,15 +13,6 @@
     <AssemblyName>ChangeOrder.Host</AssemblyName>
     <UserSecretsId>changeorder-host-dev</UserSecretsId>
 
-    <!--
-      Phase-1 bootstrap: no Program.cs exists yet (T044 creates it).
-      Microsoft.NET.Sdk.Web defaults to OutputType=Exe and would fail with
-      CS5001 "Program does not contain a static 'Main' method". We compile
-      Host as a Library at this stage; T044 removes this override when the
-      real Program.cs lands.
-    -->
-    <OutputType>Library</OutputType>
-
     <!-- R-8: required for Microsoft.AspNetCore.OpenApi source-generated interceptors. -->
     <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
   </PropertyGroup>
@@ -39,6 +30,12 @@
 
     <!-- Health checks (SQL Server) -->
     <PackageReference Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
+
+    <!-- EF Core Design — required so `dotnet ef migrations` can run against the Host as startup project. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>
