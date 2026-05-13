@@ -1,3 +1,5 @@
+using ChangeOrder.Domain.Errors;
+
 namespace ChangeOrder.Domain.Abstractions;
 
 /// <summary>
@@ -12,4 +14,12 @@ public interface IUnitOfWork
     /// </summary>
     /// <param name="cancellationToken">Token used to abort the operation.</param>
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Persists pending changes and translates a SQL Server UNIQUE-constraint
+    /// violation on the <c>IX_ChangeOrders_OrderNumber</c> index into a
+    /// <c>DomainErrors.Order.DuplicateNumber</c> failure (research.md R-1).
+    /// </summary>
+    /// <param name="cancellationToken">Token used to abort the operation.</param>
+    public Task<Result<int, Error>> SaveChangesWithDuplicateDetectionAsync(CancellationToken cancellationToken);
 }

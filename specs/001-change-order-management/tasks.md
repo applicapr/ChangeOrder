@@ -118,22 +118,22 @@ Onion layout fixed by `.specify/memory/constitution.md` v1.0.0:
 
 ### Implementation for User Story 1
 
-- [ ] T050 [P] [US1] Add `src/ChangeOrder.Business/Services/OrderNumberGenerator.cs` — sealed class implementing R-1 strategy: delegates `GetNextSequenceForDateAsync` to the repository, retries up to 3 times on UNIQUE violation, returns `Result<OrderNumber, Error>`
-- [ ] T051 [P] [US1] Add `src/ChangeOrder.Business/Services/IdempotencyService.cs` — sealed class that computes SHA-256 of the canonicalized request body, looks up the key, returns `Existing`/`Conflict`/`Fresh` outcome per research.md R-2
-- [ ] T052 [P] [US1] Add `src/ChangeOrder.Business/Commands/CreateOrder/CreateOrderCommand.cs` — record carrying all `CreateOrderRequest` fields plus `IdempotencyKey`
-- [ ] T053 [US1] Add `src/ChangeOrder.Business/Commands/CreateOrder/CreateOrderValidator.cs` — `.NET 10 AddValidation()` rules for required text fields, length bounds, email shape (per data-model.md §3)
-- [ ] T054 [US1] Add `src/ChangeOrder.Business/Commands/CreateOrder/CreateOrderHandler.cs` — sealed `ICommandHandler<CreateOrderCommand, Result<OrderResponse, Error>>`. Flow: 1) IdempotencyService lookup; 2) on Fresh, ask OrderNumberGenerator for the next sequence; 3) build `ChangeOrder` entity; 4) persist within a single transaction (order + idempotency key row); 5) on UNIQUE violation, retry. `.ConfigureAwait(false)` everywhere.
-- [ ] T055 [P] [US1] Add `src/ChangeOrder.Presentation/DTOs/Requests/CreateOrderRequest.cs` — record matching `openapi.yaml` schema
-- [ ] T056 [P] [US1] Add `src/ChangeOrder.Presentation/DTOs/Responses/OrderResponse.cs` — record matching `openapi.yaml` schema, includes `RowVersion` (base64-encoded byte[]) for FR-013
-- [ ] T057 [P] [US1] Add `src/ChangeOrder.Presentation/Mappers/OrderMapper.cs` — static extension class with `ToResponse(this ChangeOrder)` and `ToEntity(this CreateOrderRequest, OrderNumber)`
-- [ ] T058 [US1] In `src/ChangeOrder.Presentation/Extensions/EndpointRouteBuilderExtensions.cs`, implement the `POST /api/v1/change-orders` endpoint: reads `Idempotency-Key` header, invokes the command handler, returns `TypedResults.Created(...)` on 201, `TypedResults.Ok(...)` on idempotent replay, `TypedResults.UnprocessableEntity(...)` on payload divergence, validation errors via `ProblemDetailsFactory`
+- [X] T050 [P] [US1] Add `src/ChangeOrder.Business/Services/OrderNumberGenerator.cs` — sealed class implementing R-1 strategy: delegates `GetNextSequenceForDateAsync` to the repository, retries up to 3 times on UNIQUE violation, returns `Result<OrderNumber, Error>`
+- [X] T051 [P] [US1] Add `src/ChangeOrder.Business/Services/IdempotencyService.cs` — sealed class that computes SHA-256 of the canonicalized request body, looks up the key, returns `Existing`/`Conflict`/`Fresh` outcome per research.md R-2
+- [X] T052 [P] [US1] Add `src/ChangeOrder.Business/Commands/CreateOrder/CreateOrderCommand.cs` — record carrying all `CreateOrderRequest` fields plus `IdempotencyKey`
+- [X] T053 [US1] Add `src/ChangeOrder.Business/Commands/CreateOrder/CreateOrderValidator.cs` — `.NET 10 AddValidation()` rules for required text fields, length bounds, email shape (per data-model.md §3)
+- [X] T054 [US1] Add `src/ChangeOrder.Business/Commands/CreateOrder/CreateOrderHandler.cs` — sealed `ICommandHandler<CreateOrderCommand, Result<OrderResponse, Error>>`. Flow: 1) IdempotencyService lookup; 2) on Fresh, ask OrderNumberGenerator for the next sequence; 3) build `ChangeOrder` entity; 4) persist within a single transaction (order + idempotency key row); 5) on UNIQUE violation, retry. `.ConfigureAwait(false)` everywhere.
+- [X] T055 [P] [US1] Add `src/ChangeOrder.Presentation/DTOs/Requests/CreateOrderRequest.cs` — record matching `openapi.yaml` schema
+- [X] T056 [P] [US1] Add `src/ChangeOrder.Presentation/DTOs/Responses/OrderResponse.cs` — record matching `openapi.yaml` schema, includes `RowVersion` (base64-encoded byte[]) for FR-013
+- [X] T057 [P] [US1] Add `src/ChangeOrder.Presentation/Mappers/OrderMapper.cs` — static extension class with `ToResponse(this ChangeOrder)` and `ToEntity(this CreateOrderRequest, OrderNumber)`
+- [X] T058 [US1] In `src/ChangeOrder.Presentation/Extensions/EndpointRouteBuilderExtensions.cs`, implement the `POST /api/v1/change-orders` endpoint: reads `Idempotency-Key` header, invokes the command handler, returns `TypedResults.Created(...)` on 201, `TypedResults.Ok(...)` on idempotent replay, `TypedResults.UnprocessableEntity(...)` on payload divergence, validation errors via `ProblemDetailsFactory`
 
 ### Tests for User Story 1
 
-- [ ] T059 [P] [US1] `tests/ChangeOrder.Business.Tests/Commands/CreateOrder/CreateOrderHandlerTests.cs` — happy path, validation error path, idempotent replay path (same key + same payload → returns existing), payload divergence path (same key + different payload → error)
-- [ ] T060 [P] [US1] `tests/ChangeOrder.Business.Tests/Services/OrderNumberGeneratorTests.cs` — generates `yyyyMMdd-01` for first call of the day; retries on `DbUpdateException` with a UNIQUE violation; gives up after 3 attempts with `DomainErrors.Order.DailySequenceExhausted`
-- [ ] T061 [US1] `tests/ChangeOrder.Data.Tests/Concurrency/OrderNumberConcurrencyTests.cs` — **Testcontainers SQL Server** test exercising 100 simultaneous `CreateOrderHandler.HandleAsync` calls; asserts 100 distinct `OrderNumber`s and zero failures (SC-001). Tagged `[Trait("Category", "Testcontainers")]`
-- [ ] T062 [P] [US1] `tests/ChangeOrder.Presentation.Tests/Endpoints/CreateOrderEndpointTests.cs` — `WebApplicationFactory<Program>` end-to-end: 201 on success, 200 on idempotent replay, 422 on payload divergence, 400 on validation failure
+- [X] T059 [P] [US1] `tests/ChangeOrder.Business.Tests/Commands/CreateOrder/CreateOrderHandlerTests.cs` — happy path, validation error path, idempotent replay path (same key + same payload → returns existing), payload divergence path (same key + different payload → error)
+- [X] T060 [P] [US1] `tests/ChangeOrder.Business.Tests/Services/OrderNumberGeneratorTests.cs` — generates `yyyyMMdd-01` for first call of the day; retries on `DbUpdateException` with a UNIQUE violation; gives up after 3 attempts with `DomainErrors.Order.DailySequenceExhausted`
+- [~] T061 [US1] `tests/ChangeOrder.Data.Tests/Concurrency/OrderNumberConcurrencyTests.cs` — **Testcontainers SQL Server** test exercising 100 simultaneous `CreateOrderHandler.HandleAsync` calls; asserts 100 distinct `OrderNumber`s and zero failures (SC-001). Tagged `[Trait("Category", "Testcontainers")]`. Reason `[~]`: Docker daemon not running in dev environment; test compiles and gracefully returns when Docker is unavailable (see `_dockerAvailable` short-circuit). Will fully execute on CI / when Docker is up.
+- [X] T062 [P] [US1] `tests/ChangeOrder.Presentation.Tests/Endpoints/CreateOrderEndpointTests.cs` — `WebApplicationFactory<Program>` end-to-end: 201 on success, 200 on idempotent replay, 422 on payload divergence, 400 on validation failure
 
 **Checkpoint**: US1 fully functional and independently testable. Demoable.
 

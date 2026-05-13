@@ -1,7 +1,7 @@
 using System.Globalization;
+using ChangeOrder.Business.Extensions;
 using ChangeOrder.Data.Extensions;
 using ChangeOrder.Domain.Extensions;
-using ChangeOrder.Business.Extensions;
 using ChangeOrder.Presentation.Extensions;
 using Serilog;
 
@@ -12,7 +12,14 @@ namespace ChangeOrder.Host;
 /// stacks <c>AddDomain → AddDataLayer → AddBusinessLayer → AddPresentationLayer</c>,
 /// wires health checks and maps the change-order Minimal-API group.
 /// </summary>
-public static class Program
+/// <remarks>
+/// Declared as <c>partial</c> (non-static) so
+/// <c>WebApplicationFactory&lt;Program&gt;</c> from
+/// <c>Microsoft.AspNetCore.Mvc.Testing</c> can pick up this type as the
+/// integration-test entry point. The class has no instance state and is
+/// not intended to be instantiated outside the test infrastructure.
+/// </remarks>
+public partial class Program
 {
     /// <summary>Builds and runs the web host.</summary>
     public static void Main(string[] args)

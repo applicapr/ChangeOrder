@@ -2,8 +2,8 @@ using ChangeOrder.Domain.Enums;
 using ChangeOrder.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using DomainChangeOrder = ChangeOrder.Domain.Entities.ChangeOrder;
 using DomainApprovalChain = ChangeOrder.Domain.ValueObjects.ApprovalChain;
+using DomainChangeOrder = ChangeOrder.Domain.Entities.ChangeOrder;
 
 namespace ChangeOrder.Data.Configurations;
 

@@ -1,6 +1,8 @@
 using System.Reflection;
 using ChangeOrder.Business.Abstractions;
+using ChangeOrder.Business.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ChangeOrder.Business.Extensions;
 
@@ -10,8 +12,10 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Registers every <see cref="ICommandHandler{TCommand, TResult}"/> and
     /// <see cref="IQueryHandler{TQuery, TResult}"/> implementation found in
-    /// the Business assembly as a scoped service. Designed so that
-    /// adding a new handler requires no change to the Host wiring.
+    /// the Business assembly as a scoped service, plus the cross-cutting
+    /// services (<c>OrderNumberGenerator</c>, <c>IdempotencyService</c>).
+    /// Designed so that adding a new handler requires no change to the Host
+    /// wiring.
     /// </summary>
     public static IServiceCollection AddBusinessLayer(this IServiceCollection services)
     {
@@ -27,6 +31,10 @@ public static class ServiceCollectionExtensions
             RegisterHandler(services, type, typeof(ICommandHandler<,>));
             RegisterHandler(services, type, typeof(IQueryHandler<,>));
         }
+
+        services.AddScoped<OrderNumberGenerator>();
+        services.AddScoped<IdempotencyService>();
+        services.TryAddSingleton(TimeProvider.System);
 
         return services;
     }

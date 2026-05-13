@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ChangeOrder.Data\ChangeOrder.Data.csproj" />
+    <ProjectReference Include="..\..\src\ChangeOrder.Business\ChangeOrder.Business.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,6 +22,7 @@
     <PackageReference Include="FluentAssertions" Version="8.10.0" />
     <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.8" />
+    <PackageReference Include="Testcontainers.MsSql" Version="3.10.0" />
   </ItemGroup>
 
 </Project>
