@@ -113,7 +113,10 @@ public static class EndpointRouteBuilderExtensions
                 "Returns a paginated page of non-soft-deleted change orders, ordered by " +
                 "`RequestDate` descending. Page defaults to 1, pageSize defaults to 10, " +
                 "and pageSize is bounded to [1..50] by the constitution. Soft-deleted " +
-                "rows are filtered out via the EF Core global query filter (FR-009).")
+                "rows are filtered out via the EF Core global query filter (FR-009). " +
+                "Optional `?orderNumber=` query parameter applies a prefix filter on " +
+                "`OrderNumber`: pass the full canonical form (`20260513-02`) for an exact " +
+                "lookup or just the date prefix (`20260513`) for every order created that day.")
             .Produces<PagedOrderResponse>(StatusCodes.Status200OK)
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status429TooManyRequests);
@@ -321,11 +324,13 @@ public static class EndpointRouteBuilderExtensions
         IQueryHandler<GetAllOrdersQuery, Result<PagedResponse<DomainChangeOrder>, Error>> handler,
         CancellationToken cancellationToken,
         [FromQuery] int? page = null,
-        [FromQuery] int? pageSize = null)
+        [FromQuery] int? pageSize = null,
+        [FromQuery] string? orderNumber = null)
     {
         GetAllOrdersQuery query = new(
             Page: page ?? DefaultPage,
-            PageSize: pageSize ?? DefaultPageSize);
+            PageSize: pageSize ?? DefaultPageSize,
+            OrderNumber: orderNumber);
 
         Result<PagedResponse<DomainChangeOrder>, Error> result = await handler.HandleAsync(query, cancellationToken);
         if (result.IsFailure)

@@ -15,8 +15,11 @@ public interface IChangeOrderRepository
     /// <summary>Returns a single page of non-deleted orders.</summary>
     public Task<IReadOnlyList<DomainChangeOrder>> ListAsync(PagedRequest request, CancellationToken cancellationToken);
 
-    /// <summary>Total count of non-deleted orders (for pagination metadata).</summary>
-    public Task<int> CountAsync(CancellationToken cancellationToken);
+    /// <summary>
+    /// Total count of non-deleted orders, optionally filtered by
+    /// <paramref name="orderNumberFilter"/> as a prefix on <c>OrderNumber</c>.
+    /// </summary>
+    public Task<int> CountAsync(string? orderNumberFilter, CancellationToken cancellationToken);
 
     /// <summary>Adds a new order to the change tracker; commit happens through <see cref="IUnitOfWork"/>.</summary>
     public Task AddAsync(DomainChangeOrder order, CancellationToken cancellationToken);

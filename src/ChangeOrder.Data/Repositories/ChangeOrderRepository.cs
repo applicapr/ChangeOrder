@@ -38,7 +38,14 @@ public sealed class ChangeOrderRepository : IChangeOrderRepository
     {
         ArgumentNullException.ThrowIfNull(request);
         int skip = (request.Page - 1) * request.PageSize;
-        List<DomainChangeOrder> rows = await _dbContext.ChangeOrders
+        IQueryable<DomainChangeOrder> query = _dbContext.ChangeOrders;
+        if (!string.IsNullOrEmpty(request.OrderNumberFilter))
+        {
+            string filter = request.OrderNumberFilter;
+            query = query.Where(o => o.OrderNumber.Value.StartsWith(filter));
+        }
+
+        List<DomainChangeOrder> rows = await query
             .OrderByDescending(o => o.RequestDate)
             .Skip(skip)
             .Take(request.PageSize)
@@ -48,9 +55,16 @@ public sealed class ChangeOrderRepository : IChangeOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<int> CountAsync(CancellationToken cancellationToken)
+    public async Task<int> CountAsync(string? orderNumberFilter, CancellationToken cancellationToken)
     {
-        return await _dbContext.ChangeOrders
+        IQueryable<DomainChangeOrder> query = _dbContext.ChangeOrders;
+        if (!string.IsNullOrEmpty(orderNumberFilter))
+        {
+            string filter = orderNumberFilter;
+            query = query.Where(o => o.OrderNumber.Value.StartsWith(filter));
+        }
+
+        return await query
             .CountAsync(cancellationToken)
             .ConfigureAwait(false);
     }

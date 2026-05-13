@@ -7,4 +7,10 @@ namespace ChangeOrder.Business.Queries.GetAllOrders;
 /// </summary>
 /// <param name="Page">1-based page index.</param>
 /// <param name="PageSize">Page size; bounded by the constitution to [1..50].</param>
-public sealed record GetAllOrdersQuery(int Page, int PageSize);
+/// <param name="OrderNumber">
+/// Optional prefix filter on <c>OrderNumber</c>. Accepts the full canonical
+/// form (<c>20260513-02</c>) for exact lookup or just the date prefix
+/// (<c>20260513</c>) for every order created that day. <c>null</c> disables
+/// the filter. Validation tolerates digits and an optional dash separator.
+/// </param>
+public sealed record GetAllOrdersQuery(int Page, int PageSize, string? OrderNumber = null);

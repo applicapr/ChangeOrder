@@ -69,6 +69,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/OrderNumberFilter"
       responses:
         "200":
           description: Paginated page of orders
@@ -258,6 +259,21 @@ components:
       in: query
       required: false
       schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+    OrderNumberFilter:
+      name: orderNumber
+      in: query
+      required: false
+      description: |
+        Optional prefix filter on `OrderNumber`. Accepts the full canonical
+        form (`20260513-02`) for exact lookup or just the date prefix
+        (`20260513`) to return every order created that day. Validation
+        tolerates digits and an optional dash separator only.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 13
+        pattern: '^\d{1,8}(-\d{1,2})?$'
+        example: '20260513-02'
     IdempotencyKey:
       name: Idempotency-Key
       in: header

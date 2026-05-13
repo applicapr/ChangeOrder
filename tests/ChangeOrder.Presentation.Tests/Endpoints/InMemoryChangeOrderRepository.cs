@@ -30,7 +30,14 @@ internal sealed class InMemoryChangeOrderRepository : IChangeOrderRepository
     {
         ArgumentNullException.ThrowIfNull(request);
         int skip = (request.Page - 1) * request.PageSize;
-        List<DomainChangeOrder> rows = await _dbContext.ChangeOrders
+        IQueryable<DomainChangeOrder> query = _dbContext.ChangeOrders;
+        if (!string.IsNullOrEmpty(request.OrderNumberFilter))
+        {
+            string filter = request.OrderNumberFilter;
+            query = query.Where(o => o.OrderNumber.Value.StartsWith(filter, StringComparison.Ordinal));
+        }
+
+        List<DomainChangeOrder> rows = await query
             .OrderByDescending(o => o.RequestDate)
             .Skip(skip)
             .Take(request.PageSize)
@@ -38,8 +45,17 @@ internal sealed class InMemoryChangeOrderRepository : IChangeOrderRepository
         return rows;
     }
 
-    public Task<int> CountAsync(CancellationToken cancellationToken)
-        => _dbContext.ChangeOrders.CountAsync(cancellationToken);
+    public Task<int> CountAsync(string? orderNumberFilter, CancellationToken cancellationToken)
+    {
+        IQueryable<DomainChangeOrder> query = _dbContext.ChangeOrders;
+        if (!string.IsNullOrEmpty(orderNumberFilter))
+        {
+            string filter = orderNumberFilter;
+            query = query.Where(o => o.OrderNumber.Value.StartsWith(filter, StringComparison.Ordinal));
+        }
+
+        return query.CountAsync(cancellationToken);
+    }
 
     public async Task AddAsync(DomainChangeOrder order, CancellationToken cancellationToken)
     {

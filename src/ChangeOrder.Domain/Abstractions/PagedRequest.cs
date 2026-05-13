@@ -12,4 +12,10 @@ namespace ChangeOrder.Domain.Abstractions;
 /// </remarks>
 /// <param name="Page">1-based page index.</param>
 /// <param name="PageSize">Page size, 1-50.</param>
-public sealed record PagedRequest(int Page, int PageSize);
+/// <param name="OrderNumberFilter">
+/// Optional prefix filter on <c>OrderNumber</c>. Accepts the full canonical
+/// form (<c>20260513-02</c>) for exact lookup or just the date prefix
+/// (<c>20260513</c>) to return every order created that day. <c>null</c>
+/// disables the filter.
+/// </param>
+public sealed record PagedRequest(int Page, int PageSize, string? OrderNumberFilter = null);
