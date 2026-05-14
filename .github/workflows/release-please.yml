@@ -79,7 +79,7 @@ jobs:
           Compress-Archive -Path "${{ env.PUBLISH_DIR }}/*" -DestinationPath "changeorder-api-$tag-linux-x64.zip"
 
       - name: Upload release artifact
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.release-please.outputs.tag_name }}
           files: "changeorder-api-${{ needs.release-please.outputs.tag_name }}-linux-x64.zip"
