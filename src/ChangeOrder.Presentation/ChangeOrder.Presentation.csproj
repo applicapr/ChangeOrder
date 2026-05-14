@@ -14,21 +14,21 @@
 
     <!-- Version: bumped by release-please on each release.
          FileVersion: updated post-release with the build date (yyyy.M.d.0). -->
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <FileVersion>2026.5.13.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ChangeOrder.Business\ChangeOrder.Business.csproj" />
+    <ProjectReference Include="..\ChangeOrder.Business\ChangeOrder.Business.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Asp.Versioning.Http" Version="10.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8" />
+    <PackageReference Include="Asp.Versioning.Http" Version="10.0.0"/>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8"/>
   </ItemGroup>
 
 </Project>
