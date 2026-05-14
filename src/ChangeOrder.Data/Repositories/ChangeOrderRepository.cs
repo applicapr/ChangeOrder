@@ -2,9 +2,11 @@ using System.Globalization;
 using ChangeOrder.Data.Persistence;
 using ChangeOrder.Domain.Abstractions;
 using ChangeOrder.Domain.Entities;
+using ChangeOrder.Domain.Errors;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Logging;
 using DomainChangeOrder = ChangeOrder.Domain.Entities.ChangeOrder;
 
 namespace ChangeOrder.Data.Repositories;
@@ -14,15 +16,20 @@ namespace ChangeOrder.Data.Repositories;
 /// <see cref="GetNextSequenceForDateAsync"/> method uses the
 /// <c>UPDLOCK + HOLDLOCK</c> raw-SQL strategy described in research.md R-1.
 /// </summary>
-public sealed class ChangeOrderRepository : IChangeOrderRepository
+public sealed partial class ChangeOrderRepository : IChangeOrderRepository
 {
+    private const int SqlErrorDeadlockVictim = 1205;
+
     private readonly ApplicationDbContext _dbContext;
+    private readonly ILogger<ChangeOrderRepository> _logger;
 
     /// <summary>Builds a repository bound to the given context.</summary>
-    public ChangeOrderRepository(ApplicationDbContext dbContext)
+    public ChangeOrderRepository(ApplicationDbContext dbContext, ILogger<ChangeOrderRepository> logger)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(logger);
         _dbContext = dbContext;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -81,7 +88,7 @@ public sealed class ChangeOrderRepository : IChangeOrderRepository
     }
 
     /// <inheritdoc/>
-    public async Task<int> GetNextSequenceForDateAsync(DateOnly dateUtc, CancellationToken cancellationToken)
+    public async Task<Result<int, Error>> GetNextSequenceForDateAsync(DateOnly dateUtc, CancellationToken cancellationToken)
     {
         string prefix = dateUtc.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
         const string Sql = """
@@ -111,7 +118,19 @@ public sealed class ChangeOrderRepository : IChangeOrderRepository
             command.Parameters.Add(new SqlParameter("@datePrefix", prefix));
 
             object? scalar = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-            return scalar is null or DBNull ? 1 : Convert.ToInt32(scalar, CultureInfo.InvariantCulture);
+            int next = scalar is null or DBNull ? 1 : Convert.ToInt32(scalar, CultureInfo.InvariantCulture);
+            return Result<int, Error>.Success(next);
+        }
+        catch (SqlException ex) when (ex.Number == SqlErrorDeadlockVictim)
+        {
+            // C1: 16 concurrent workers can deadlock on the UPDLOCK+HOLDLOCK
+            // key-range scan over an empty daily prefix — SQL Server picks one
+            // session as the deadlock victim and raises 1205 from the SELECT
+            // itself, before SaveChanges. Map to a retryable domain failure so
+            // CreateOrderHandler can roll back the current transaction and try
+            // again under a fresh lock acquisition order.
+            LogDeadlockOnSequenceRead(ex);
+            return Result<int, Error>.Failure(DomainErrors.Order.DeadlockVictim());
         }
         finally
         {
@@ -121,6 +140,12 @@ public sealed class ChangeOrderRepository : IChangeOrderRepository
             }
         }
     }
+
+    [LoggerMessage(
+        EventId = 3001,
+        Level = LogLevel.Warning,
+        Message = "SQL Server picked this session as the deadlock victim (1205) while reading the daily OrderNumber sequence; caller should retry.")]
+    private partial void LogDeadlockOnSequenceRead(Exception ex);
 
     /// <inheritdoc/>
     public async Task<IdempotencyKey?> FindIdempotencyAsync(string key, CancellationToken cancellationToken)

@@ -17,7 +17,7 @@ public sealed class OrderNumberGeneratorTests
     {
         IChangeOrderRepository repository = Substitute.For<IChangeOrderRepository>();
         repository.GetNextSequenceForDateAsync(Today, Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(1));
+            .Returns(Task.FromResult(Result<int, Error>.Success(1)));
         OrderNumberGenerator generator = new(repository);
 
         Result<OrderNumber, Error> result = await generator.GenerateAsync(Today, CancellationToken.None);
@@ -33,7 +33,7 @@ public sealed class OrderNumberGeneratorTests
         int[] sequences = [1, 2, 3];
         int call = 0;
         repository.GetNextSequenceForDateAsync(Today, Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromResult(sequences[call++]));
+            .Returns(_ => Task.FromResult(Result<int, Error>.Success(sequences[call++])));
         OrderNumberGenerator generator = new(repository);
 
         Result<OrderNumber, Error> first = await generator.GenerateAsync(Today, CancellationToken.None);
@@ -50,12 +50,26 @@ public sealed class OrderNumberGeneratorTests
     {
         IChangeOrderRepository repository = Substitute.For<IChangeOrderRepository>();
         repository.GetNextSequenceForDateAsync(Today, Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(100));
+            .Returns(Task.FromResult(Result<int, Error>.Success(100)));
         OrderNumberGenerator generator = new(repository);
 
         Result<OrderNumber, Error> result = await generator.GenerateAsync(Today, CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
         result.Error!.Code.Should().Be("order.daily_sequence_exhausted");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_WhenRepositorySignalsDeadlock_PropagatesDeadlockVictim()
+    {
+        IChangeOrderRepository repository = Substitute.For<IChangeOrderRepository>();
+        repository.GetNextSequenceForDateAsync(Today, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(Result<int, Error>.Failure(DomainErrors.Order.DeadlockVictim())));
+        OrderNumberGenerator generator = new(repository);
+
+        Result<OrderNumber, Error> result = await generator.GenerateAsync(Today, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("order.deadlock_victim");
     }
 }

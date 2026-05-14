@@ -25,6 +25,17 @@ public static class DomainErrors
                 "order.duplicate_number",
                 string.Format(CultureInfo.InvariantCulture, "OrderNumber {0} already exists.", number));
 
+        /// <summary>
+        /// The SQL Server chose this session as the deadlock victim (error 1205)
+        /// while the <c>UPDLOCK + HOLDLOCK</c> sequence read was executing.
+        /// Surfaced from <c>IChangeOrderRepository.GetNextSequenceForDateAsync</c>
+        /// so the command handler can retry under a fresh transaction (research.md R-1, C1).
+        /// </summary>
+        public static Error DeadlockVictim()
+            => new(
+                "order.deadlock_victim",
+                "The order-number sequence read was chosen as a SQL Server deadlock victim; the caller should retry.");
+
         /// <summary>Requested status transition is not allowed by the state machine (HTTP 409).</summary>
         public static Error InvalidStateTransition(OrderStatus from, OrderStatus to)
             => new(

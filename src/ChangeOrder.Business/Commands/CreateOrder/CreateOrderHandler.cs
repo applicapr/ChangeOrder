@@ -18,7 +18,20 @@ namespace ChangeOrder.Business.Commands.CreateOrder;
 /// </summary>
 public sealed partial class CreateOrderHandler : ICommandHandler<CreateOrderCommand, Result<CreateOrderResult, Error>>
 {
-    private const int MaxRetryAttempts = 3;
+    // R-1 C1: 16 concurrent workers competing for the daily-prefix key range
+    // can deadlock several times in a row. Three attempts proved insufficient
+    // under saturation, so the budget is wider to absorb transient SQL Server
+    // contention without surfacing a 409 to the caller. Each attempt opens a
+    // fresh transaction; the SQL Server resolves the deadlock by aborting one
+    // session and we re-read the sequence with a backoff.
+    private const int MaxRetryAttempts = 8;
+
+    // Exponential backoff (10ms, 20ms, 40ms, ...) capped at 200ms plus a
+    // randomised jitter in [0, 25)ms so colliding workers do not retry in
+    // lockstep. The cap keeps the worst-case end-to-end latency bounded.
+    private const int BaseBackoffMs = 10;
+    private const int MaxBackoffMs = 200;
+    private const int MaxJitterMs = 25;
 
     private readonly IdempotencyService _idempotencyService;
     private readonly OrderNumberGenerator _orderNumberGenerator;
@@ -123,6 +136,18 @@ public sealed partial class CreateOrderHandler : ICommandHandler<CreateOrderComm
 
             if (numberResult.IsFailure)
             {
+                // R-1 C1: a deadlock victim (1205) on the locked sequence read
+                // is retryable under a fresh transaction — leaving the using
+                // scope auto-rolls back the aborted one. Any other failure
+                // (e.g. DailySequenceExhausted) is terminal.
+                if (IsRetryable(numberResult.Error!))
+                {
+                    LogSequenceReadRetryable(attempt, MaxRetryAttempts, numberResult.Error!.Code);
+                    lastFailure = Result<CreateOrderResult, Error>.Failure(numberResult.Error!);
+                    await DelayBackoffAsync(attempt, cancellationToken).ConfigureAwait(false);
+                    continue;
+                }
+
                 return Result<CreateOrderResult, Error>.Failure(numberResult.Error!);
             }
 
@@ -147,9 +172,21 @@ public sealed partial class CreateOrderHandler : ICommandHandler<CreateOrderComm
             // attempt re-reads the MAX(sequence) under a fresh lock.
             LogUniqueCollision(attempt, MaxRetryAttempts, numberResult.Value!.Value);
             lastFailure = Result<CreateOrderResult, Error>.Failure(saveResult.Error!);
+            await DelayBackoffAsync(attempt, cancellationToken).ConfigureAwait(false);
         }
 
         return lastFailure;
+    }
+
+    private static bool IsRetryable(Error error)
+        => string.Equals(error.Code, "order.deadlock_victim", StringComparison.Ordinal);
+
+    private static async Task DelayBackoffAsync(int attempt, CancellationToken cancellationToken)
+    {
+        // attempt is 1-based; exponential growth capped at MaxBackoffMs.
+        int exponential = BaseBackoffMs * (1 << Math.Min(attempt - 1, 6));
+        int delayMs = Math.Min(exponential, MaxBackoffMs) + Random.Shared.Next(MaxJitterMs);
+        await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
     }
 
     private static DomainChangeOrder BuildOrder(OrderNumber orderNumber, CreateOrderCommand command, DateTime nowUtc)
@@ -177,4 +214,10 @@ public sealed partial class CreateOrderHandler : ICommandHandler<CreateOrderComm
         Level = LogLevel.Warning,
         Message = "OrderNumber UNIQUE collision on attempt {Attempt}/{Max} for {OrderNumber}; retrying.")]
     private partial void LogUniqueCollision(int attempt, int max, string orderNumber);
+
+    [LoggerMessage(
+        EventId = 1002,
+        Level = LogLevel.Warning,
+        Message = "Sequence read failed on attempt {Attempt}/{Max} with retryable error {ErrorCode}; retrying.")]
+    private partial void LogSequenceReadRetryable(int attempt, int max, string errorCode);
 }

@@ -22,7 +22,7 @@ public sealed class CreateOrderHandlerTests
     {
         IChangeOrderRepository repository = Substitute.For<IChangeOrderRepository>();
         repository.GetNextSequenceForDateAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(1));
+            .Returns(Task.FromResult(Result<int, Error>.Success(1)));
         repository.FindIdempotencyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<IdempotencyKey?>(null));
 
@@ -103,7 +103,7 @@ public sealed class CreateOrderHandlerTests
         int[] sequences = [1, 2];
         int sequenceCall = 0;
         repository.GetNextSequenceForDateAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromResult(sequences[sequenceCall++]));
+            .Returns(_ => Task.FromResult(Result<int, Error>.Success(sequences[sequenceCall++])));
         repository.FindIdempotencyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<IdempotencyKey?>(null));
 
@@ -144,7 +144,7 @@ public sealed class CreateOrderHandlerTests
         int[] sequences = [1, 2];
         int sequenceCall = 0;
         repository.GetNextSequenceForDateAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromResult(sequences[sequenceCall++]));
+            .Returns(_ => Task.FromResult(Result<int, Error>.Success(sequences[sequenceCall++])));
         repository.FindIdempotencyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<IdempotencyKey?>(null));
 
@@ -189,7 +189,7 @@ public sealed class CreateOrderHandlerTests
         IChangeOrderRepository repository = Substitute.For<IChangeOrderRepository>();
         int sequenceCall = 0;
         repository.GetNextSequenceForDateAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromResult(++sequenceCall));
+            .Returns(_ => Task.FromResult(Result<int, Error>.Success(++sequenceCall)));
         repository.FindIdempotencyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<IdempotencyKey?>(null));
 
@@ -208,7 +208,10 @@ public sealed class CreateOrderHandlerTests
 
         result.IsFailure.Should().BeTrue();
         result.Error!.Code.Should().Be("order.duplicate_number");
-        await uow.Received(3).BeginTransactionAsync(Arg.Any<CancellationToken>());
+        // R-1 C1: budget widened to 8 to absorb saturated-deadlock retries
+        // under 16 concurrent workers; the handler exhausts every attempt
+        // before surfacing the last failure to the caller.
+        await uow.Received(8).BeginTransactionAsync(Arg.Any<CancellationToken>());
         await tx.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
     }
 

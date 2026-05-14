@@ -122,7 +122,7 @@ public sealed class OrderNumberConcurrencyTests : IAsyncLifetime
         optionsBuilder.AddInterceptors(interceptor);
 
         await using ApplicationDbContext db = new(optionsBuilder.Options);
-        ChangeOrderRepository repository = new(db);
+        ChangeOrderRepository repository = new(db, NullLogger<ChangeOrderRepository>.Instance);
         UnitOfWork unitOfWork = new(db, NullLogger<UnitOfWork>.Instance);
         IdempotencyService idempotency = new(repository);
         OrderNumberGenerator generator = new(repository);

@@ -2,6 +2,7 @@ using System.Globalization;
 using ChangeOrder.Data.Persistence;
 using ChangeOrder.Domain.Abstractions;
 using ChangeOrder.Domain.Entities;
+using ChangeOrder.Domain.Errors;
 using Microsoft.EntityFrameworkCore;
 using DomainChangeOrder = ChangeOrder.Domain.Entities.ChangeOrder;
 
@@ -62,7 +63,7 @@ internal sealed class InMemoryChangeOrderRepository : IChangeOrderRepository
         await _dbContext.ChangeOrders.AddAsync(order, cancellationToken);
     }
 
-    public async Task<int> GetNextSequenceForDateAsync(DateOnly dateUtc, CancellationToken cancellationToken)
+    public async Task<Result<int, Error>> GetNextSequenceForDateAsync(DateOnly dateUtc, CancellationToken cancellationToken)
     {
         string prefix = dateUtc.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
         List<string> values = await _dbContext.ChangeOrders
@@ -78,7 +79,7 @@ internal sealed class InMemoryChangeOrderRepository : IChangeOrderRepository
                 max = parsed;
             }
         }
-        return max + 1;
+        return Result<int, Error>.Success(max + 1);
     }
 
     public Task<IdempotencyKey?> FindIdempotencyAsync(string key, CancellationToken cancellationToken)

@@ -38,10 +38,18 @@ public sealed class OrderNumberGenerator
         DateOnly dateUtc,
         CancellationToken cancellationToken)
     {
-        int nextSequence = await _repository
+        Result<int, Error> sequenceResult = await _repository
             .GetNextSequenceForDateAsync(dateUtc, cancellationToken)
             .ConfigureAwait(false);
 
-        return OrderNumber.Create(dateUtc, nextSequence);
+        if (sequenceResult.IsFailure)
+        {
+            // R-1 C1: propagate retryable failures (e.g. order.deadlock_victim)
+            // verbatim so the command-layer retry loop can decide whether to
+            // re-attempt under a fresh transaction.
+            return Result<OrderNumber, Error>.Failure(sequenceResult.Error!);
+        }
+
+        return OrderNumber.Create(dateUtc, sequenceResult.Value!);
     }
 }

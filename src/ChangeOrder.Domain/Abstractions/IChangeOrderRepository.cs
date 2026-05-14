@@ -1,4 +1,5 @@
 using ChangeOrder.Domain.Entities;
+using ChangeOrder.Domain.Errors;
 using DomainChangeOrder = ChangeOrder.Domain.Entities.ChangeOrder;
 
 namespace ChangeOrder.Domain.Abstractions;
@@ -36,9 +37,12 @@ public interface IChangeOrderRepository
     /// <summary>
     /// Returns the next daily sequence for <paramref name="dateUtc"/> under a
     /// pessimistic <c>UPDLOCK + HOLDLOCK</c> read (research.md R-1). The caller
-    /// is responsible for retrying on UNIQUE-constraint collisions.
+    /// is responsible for retrying on UNIQUE-constraint collisions. When the
+    /// SQL Server picks this session as the deadlock victim (error 1205) the
+    /// failure surfaces as <c>DomainErrors.Order.DeadlockVictim</c> so the
+    /// command handler can retry under a fresh transaction (research.md R-1 C1).
     /// </summary>
-    public Task<int> GetNextSequenceForDateAsync(DateOnly dateUtc, CancellationToken cancellationToken);
+    public Task<Result<int, Error>> GetNextSequenceForDateAsync(DateOnly dateUtc, CancellationToken cancellationToken);
 
     /// <summary>Looks up the persisted idempotency record for a given client key; <c>null</c> on miss.</summary>
     public Task<IdempotencyKey?> FindIdempotencyAsync(string key, CancellationToken cancellationToken);
