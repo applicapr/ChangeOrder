@@ -22,7 +22,7 @@
       Propagates to AssemblyVersion, AssemblyFileVersion and
       AssemblyInformationalVersion across every project in the solution.
     -->
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
 
     <!--
       Silence CS1591 "Missing XML comment for publicly visible type or member"
