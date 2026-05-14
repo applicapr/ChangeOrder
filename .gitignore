@@ -22,6 +22,7 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+*.zip
 
 # .NET Core
 project.lock.json
@@ -52,3 +53,17 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Local AI assistant files (per-developer, no commit)
+CLAUDE.md
+.engram/
+.claude/
+
+# IDE / Editor local files (per-developer, no commit)
+.idea/
+
+# macOS Finder metadata
+.DS_Store
+
+# Docker Compose local environment (per-developer, contains SA_PASSWORD — no commit)
+.env

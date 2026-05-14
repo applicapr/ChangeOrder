@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ChangeOrder.Domain/ChangeOrder.Domain.csproj" />
+    <Project Path="src/ChangeOrder.Business/ChangeOrder.Business.csproj" />
+    <Project Path="src/ChangeOrder.Data/ChangeOrder.Data.csproj" />
+    <Project Path="src/ChangeOrder.Presentation/ChangeOrder.Presentation.csproj" />
+    <Project Path="src/ChangeOrder.Host/ChangeOrder.Host.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ChangeOrder.Domain.Tests/ChangeOrder.Domain.Tests.csproj" />
+    <Project Path="tests/ChangeOrder.Business.Tests/ChangeOrder.Business.Tests.csproj" />
+    <Project Path="tests/ChangeOrder.Data.Tests/ChangeOrder.Data.Tests.csproj" />
+    <Project Path="tests/ChangeOrder.Presentation.Tests/ChangeOrder.Presentation.Tests.csproj" />
+  </Folder>
+</Solution>

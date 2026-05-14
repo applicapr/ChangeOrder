@@ -1,0 +1,223 @@
+using ChangeOrder.Business.Abstractions;
+using ChangeOrder.Business.Services;
+using ChangeOrder.Domain.Abstractions;
+using ChangeOrder.Domain.Entities;
+using ChangeOrder.Domain.Errors;
+using ChangeOrder.Domain.ValueObjects;
+using Microsoft.Extensions.Logging;
+using DomainChangeOrder = ChangeOrder.Domain.Entities.ChangeOrder;
+
+namespace ChangeOrder.Business.Commands.CreateOrder;
+
+/// <summary>
+/// Handler for <see cref="CreateOrderCommand"/>. Orchestrates the full US1
+/// path: validation → idempotency lookup → next-sequence allocation →
+/// aggregate construction → transactional persistence with UNIQUE-violation
+/// retry (research.md R-1 + R-2). Returns the aggregate and a replay flag so
+/// the Presentation layer can pick between 201 Created and 200 OK.
+/// </summary>
+public sealed partial class CreateOrderHandler : ICommandHandler<CreateOrderCommand, Result<CreateOrderResult, Error>>
+{
+    // R-1 C1: 16 concurrent workers competing for the daily-prefix key range
+    // can deadlock several times in a row. Three attempts proved insufficient
+    // under saturation, so the budget is wider to absorb transient SQL Server
+    // contention without surfacing a 409 to the caller. Each attempt opens a
+    // fresh transaction; the SQL Server resolves the deadlock by aborting one
+    // session and we re-read the sequence with a backoff.
+    private const int MaxRetryAttempts = 8;
+
+    // Exponential backoff (10ms, 20ms, 40ms, ...) capped at 200ms plus a
+    // randomised jitter in [0, 25)ms so colliding workers do not retry in
+    // lockstep. The cap keeps the worst-case end-to-end latency bounded.
+    private const int BaseBackoffMs = 10;
+    private const int MaxBackoffMs = 200;
+    private const int MaxJitterMs = 25;
+
+    private readonly IdempotencyService _idempotencyService;
+    private readonly OrderNumberGenerator _orderNumberGenerator;
+    private readonly IChangeOrderRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<CreateOrderHandler> _logger;
+    private readonly TimeProvider _timeProvider;
+
+    /// <summary>Builds the handler with every dependency it needs to run.</summary>
+    public CreateOrderHandler(
+        IdempotencyService idempotencyService,
+        OrderNumberGenerator orderNumberGenerator,
+        IChangeOrderRepository repository,
+        IUnitOfWork unitOfWork,
+        ILogger<CreateOrderHandler> logger,
+        TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(idempotencyService);
+        ArgumentNullException.ThrowIfNull(orderNumberGenerator);
+        ArgumentNullException.ThrowIfNull(repository);
+        ArgumentNullException.ThrowIfNull(unitOfWork);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        _idempotencyService = idempotencyService;
+        _orderNumberGenerator = orderNumberGenerator;
+        _repository = repository;
+        _unitOfWork = unitOfWork;
+        _logger = logger;
+        _timeProvider = timeProvider;
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result<CreateOrderResult, Error>> HandleAsync(
+        CreateOrderCommand command,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        Result<TVoid, Error> validation = CreateOrderValidator.Validate(command);
+        if (validation.IsFailure)
+        {
+            return Result<CreateOrderResult, Error>.Failure(validation.Error!);
+        }
+
+        IdempotencyOutcome outcome = await _idempotencyService
+            .ResolveAsync(command.IdempotencyKey, command, cancellationToken)
+            .ConfigureAwait(false);
+
+        return outcome switch
+        {
+            IdempotencyOutcome.Existing existing
+                => await ReplayAsync(existing.OrderId, cancellationToken).ConfigureAwait(false),
+            IdempotencyOutcome.Conflict
+                => Result<CreateOrderResult, Error>.Failure(
+                    DomainErrors.Idempotency.PayloadDivergence(command.IdempotencyKey)),
+            IdempotencyOutcome.Fresh fresh
+                => await CreateFreshAsync(command, fresh.Hash, cancellationToken).ConfigureAwait(false),
+            _ => Result<CreateOrderResult, Error>.Failure(
+                new Error("idempotency.unknown_outcome", "Unexpected idempotency outcome."))
+        };
+    }
+
+    private async Task<Result<CreateOrderResult, Error>> ReplayAsync(Guid orderId, CancellationToken cancellationToken)
+    {
+        DomainChangeOrder? existing = await _repository
+            .GetByIdAsync(orderId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (existing is null)
+        {
+            return Result<CreateOrderResult, Error>.Failure(DomainErrors.Order.NotFound(orderId));
+        }
+
+        return Result<CreateOrderResult, Error>.Success(new CreateOrderResult(existing, WasReplay: true));
+    }
+
+    private async Task<Result<CreateOrderResult, Error>> CreateFreshAsync(
+        CreateOrderCommand command,
+        byte[] requestHash,
+        CancellationToken cancellationToken)
+    {
+        DateTime nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+        DateOnly today = DateOnly.FromDateTime(nowUtc);
+
+        Result<CreateOrderResult, Error> lastFailure = Result<CreateOrderResult, Error>
+            .Failure(DomainErrors.Order.DailySequenceExhausted(today));
+
+        for (int attempt = 1; attempt <= MaxRetryAttempts; attempt++)
+        {
+            // R-1: the UPDLOCK+HOLDLOCK read in GetNextSequenceForDateAsync and
+            // the INSERT must share the same physical transaction so the row
+            // lock is held across both statements. Each retry opens a fresh
+            // transaction; the `await using` ensures rollback on failure paths.
+            await using IUnitOfWorkTransaction transaction = await _unitOfWork
+                .BeginTransactionAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            Result<OrderNumber, Error> numberResult = await _orderNumberGenerator
+                .GenerateAsync(today, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (numberResult.IsFailure)
+            {
+                // R-1 C1: a deadlock victim (1205) on the locked sequence read
+                // is retryable under a fresh transaction — leaving the using
+                // scope auto-rolls back the aborted one. Any other failure
+                // (e.g. DailySequenceExhausted) is terminal.
+                if (IsRetryable(numberResult.Error!))
+                {
+                    LogSequenceReadRetryable(attempt, MaxRetryAttempts, numberResult.Error!.Code);
+                    lastFailure = Result<CreateOrderResult, Error>.Failure(numberResult.Error!);
+                    await DelayBackoffAsync(attempt, cancellationToken).ConfigureAwait(false);
+                    continue;
+                }
+
+                return Result<CreateOrderResult, Error>.Failure(numberResult.Error!);
+            }
+
+            DomainChangeOrder order = BuildOrder(numberResult.Value!, command, nowUtc);
+            IdempotencyKey idempotency = new(command.IdempotencyKey, order.Id, requestHash, nowUtc);
+
+            await _repository.AddAsync(order, cancellationToken).ConfigureAwait(false);
+            await _repository.AddIdempotencyAsync(idempotency, cancellationToken).ConfigureAwait(false);
+
+            Result<int, Error> saveResult = await _unitOfWork
+                .SaveChangesWithDuplicateDetectionAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            if (saveResult.IsSuccess)
+            {
+                await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+                return Result<CreateOrderResult, Error>.Success(new CreateOrderResult(order, WasReplay: false));
+            }
+
+            // SaveChangesWithDuplicateDetectionAsync already cleared the tracker.
+            // Leaving the using-scope rolls back the transaction so the next
+            // attempt re-reads the MAX(sequence) under a fresh lock.
+            LogUniqueCollision(attempt, MaxRetryAttempts, numberResult.Value!.Value);
+            lastFailure = Result<CreateOrderResult, Error>.Failure(saveResult.Error!);
+            await DelayBackoffAsync(attempt, cancellationToken).ConfigureAwait(false);
+        }
+
+        return lastFailure;
+    }
+
+    private static bool IsRetryable(Error error)
+        => string.Equals(error.Code, "order.deadlock_victim", StringComparison.Ordinal);
+
+    private static async Task DelayBackoffAsync(int attempt, CancellationToken cancellationToken)
+    {
+        // attempt is 1-based; exponential growth capped at MaxBackoffMs.
+        int exponential = BaseBackoffMs * (1 << Math.Min(attempt - 1, 6));
+        int delayMs = Math.Min(exponential, MaxBackoffMs) + Random.Shared.Next(MaxJitterMs);
+        await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static DomainChangeOrder BuildOrder(OrderNumber orderNumber, CreateOrderCommand command, DateTime nowUtc)
+    {
+        RequesterInfo requester = new(
+            command.RequesterName,
+            command.RequesterPosition,
+            command.RequesterDepartment,
+            command.RequesterEmail);
+
+        ChangeOrderContent content = new(
+            command.ProgramName,
+            command.ProductionVersion,
+            command.VersionScreenshotPath,
+            command.WorkDescription,
+            command.RequestDetails,
+            command.Justification,
+            command.RequiredAction);
+
+        return new DomainChangeOrder(orderNumber, nowUtc, requester, content);
+    }
+
+    [LoggerMessage(
+        EventId = 1001,
+        Level = LogLevel.Warning,
+        Message = "OrderNumber UNIQUE collision on attempt {Attempt}/{Max} for {OrderNumber}; retrying.")]
+    private partial void LogUniqueCollision(int attempt, int max, string orderNumber);
+
+    [LoggerMessage(
+        EventId = 1002,
+        Level = LogLevel.Warning,
+        Message = "Sequence read failed on attempt {Attempt}/{Max} with retryable error {ErrorCode}; retrying.")]
+    private partial void LogSequenceReadRetryable(int attempt, int max, string errorCode);
+}

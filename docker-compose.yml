@@ -1,0 +1,121 @@
+# Docker Compose para ChangeOrder.
+#
+# Servicios:
+#   sqlserver  — SQL Server 2022 (Developer edition) con healthcheck via sqlcmd.
+#   migrations — sidecar one-shot que corre `dotnet ef database update` y termina.
+#   api        — ChangeOrder.Host escuchando en http://localhost:8080.
+#
+# Uso:
+#   cp .env.example .env             # editar SA_PASSWORD (no commitear)
+#   docker compose up --build        # primera vez (~5 min: pull + build)
+#   docker compose up -d             # arrancar en background
+#   docker compose logs -f api       # ver logs de la API
+#   docker compose down              # parar (DB persiste en volumen)
+#   docker compose down -v           # parar + borrar volumen DB
+
+name: changeorder
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: changeorder-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${SA_PASSWORD:?SA_PASSWORD missing — copy .env.example to .env}"
+      MSSQL_PID: "Developer"
+    ports:
+      # 1433 collides with other local SQL Server containers; expose on 14330 instead.
+      - "14330:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q \"SELECT 1\" || exit 1"
+      interval: 10s
+      retries: 12
+      start_period: 30s
+      timeout: 5s
+    restart: unless-stopped
+    networks:
+      - changeorder-net
+
+  migrations:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    container_name: changeorder-migrations
+    working_dir: /src
+    volumes:
+      - .:/src
+      # Anonymous volumes shadow the host's bin/obj per project so the container
+      # never sees prebuilt artifacts that reference host-only NuGet paths
+      # (~/.nuget on macOS does not exist inside the SDK image).
+      - /src/src/ChangeOrder.Domain/bin
+      - /src/src/ChangeOrder.Domain/obj
+      - /src/src/ChangeOrder.Business/bin
+      - /src/src/ChangeOrder.Business/obj
+      - /src/src/ChangeOrder.Data/bin
+      - /src/src/ChangeOrder.Data/obj
+      - /src/src/ChangeOrder.Presentation/bin
+      - /src/src/ChangeOrder.Presentation/obj
+      - /src/src/ChangeOrder.Host/bin
+      - /src/src/ChangeOrder.Host/obj
+    environment:
+      DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2SUPPORT: "false"
+      DOTNET_SYSTEM_NET_DISABLEIPV6: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=ChangeOrder;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=true;Encrypt=false;"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        echo ">>> Installing dotnet-ef 10.0.8..."
+        dotnet tool install --global dotnet-ef --version 10.0.8 >/dev/null
+        export PATH=$$PATH:/root/.dotnet/tools
+        echo ">>> Restoring NuGet packages (obj/ shadowed, no cache from host)..."
+        dotnet restore src/ChangeOrder.Host/ChangeOrder.Host.csproj
+        echo ">>> Applying EF Core migrations to ChangeOrder database..."
+        dotnet ef database update \
+          --project src/ChangeOrder.Data \
+          --startup-project src/ChangeOrder.Host \
+          --no-build || dotnet ef database update \
+          --project src/ChangeOrder.Data \
+          --startup-project src/ChangeOrder.Host
+        echo ">>> Migrations applied successfully."
+    networks:
+      - changeorder-net
+
+  api:
+    build:
+      context: .
+      dockerfile: src/ChangeOrder.Host/Dockerfile
+    container_name: changeorder-api
+    ports:
+      # 8080 collides with other local containers; expose on 18080 instead.
+      - "18080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=ChangeOrder;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=true;Encrypt=false;"
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+      - changeorder-net
+
+volumes:
+  mssql-data:
+    name: changeorder-mssql-data
+
+networks:
+  changeorder-net:
+    name: changeorder-net
+    driver: bridge

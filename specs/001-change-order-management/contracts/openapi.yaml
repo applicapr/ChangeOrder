@@ -1,0 +1,452 @@
+openapi: 3.1.0
+info:
+  title: ChangeOrder.Api
+  version: 1.0.0
+  description: |
+    Internal Change Order Management API for production-change requests.
+    Generated as the formal contract for feature `001-change-order-management`.
+    Fase 1 — internal corporate deployment, network-scoped authorization.
+  contact:
+    name: Programming Division
+servers:
+  - url: http://localhost:5151
+    description: Local development host
+  - url: https://changeorder.internal.example
+    description: Internal corporate deployment (placeholder)
+
+tags:
+  - name: change-orders
+    description: CRUD and workflow advancement for change orders
+  - name: workflow
+    description: Endpoints that drive an order through its lifecycle
+  - name: health
+    description: Operational endpoints
+  - name: meta
+    description: Service identity and build metadata
+
+paths:
+  /version:
+    get:
+      tags: [meta]
+      summary: Service identity and version
+      description: |
+        Returns the running service name, semantic version and hosting environment.
+        Lives outside the versioned `/api/v{version}` group so that monitoring
+        tools can probe the build identity without negotiating an API version.
+      operationId: getVersion
+      responses:
+        "200":
+          description: Service identity payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionResponse"
+
+  /health:
+    get:
+      tags: [health]
+      summary: Liveness + SQL Server connectivity check
+      operationId: health
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthReport"
+        "503":
+          description: Unhealthy — SQL Server unreachable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthReport"
+
+  /api/v1/change-orders:
+    get:
+      tags: [change-orders]
+      summary: List change orders (paginated, excludes soft-deleted)
+      operationId: listChangeOrders
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/OrderNumberFilter"
+      responses:
+        "200":
+          description: Paginated page of orders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedOrderResponse"
+        "400":
+          $ref: "#/components/responses/ValidationProblem"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      tags: [change-orders]
+      summary: Create a new change order (idempotent via Idempotency-Key)
+      operationId: createChangeOrder
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderRequest"
+      responses:
+        "201":
+          description: Order created
+          headers:
+            Location:
+              description: URL of the created order
+              schema: { type: string, format: uri }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        "200":
+          description: Idempotent replay — order already exists for this Idempotency-Key, returned unchanged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        "400":
+          $ref: "#/components/responses/ValidationProblem"
+        "422":
+          description: Idempotency-Key payload divergence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /api/v1/change-orders/{id}:
+    get:
+      tags: [change-orders]
+      summary: Get a change order by id
+      operationId: getChangeOrderById
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Order found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      tags: [change-orders]
+      summary: Update a change order (allowed only while Draft — FR-006)
+      operationId: updateChangeOrder
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrderRequest"
+      responses:
+        "204":
+          description: Updated
+        "400":
+          $ref: "#/components/responses/ValidationProblem"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: |
+            Conflict. Two cases:
+            (a) `order.edit_after_draft` — the order has left Draft; use the workflow endpoints (FR-006).
+            (b) `order.concurrency_conflict` — the submitted `rowVersion` does not match the persisted token (FR-013); refetch via GET and retry.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      tags: [change-orders]
+      summary: Soft-delete a change order
+      operationId: deleteChangeOrder
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Soft-deleted (IsDeleted=true, row physically retained)
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /api/v1/change-orders/{id}/approvals/{level}:
+    put:
+      tags: [workflow]
+      summary: Record an approval verdict for a single level of the chain
+      operationId: recordApproval
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: level
+          in: path
+          required: true
+          description: Approval level
+          schema:
+            type: string
+            enum: [requester, departmentHead, itHead, programmingDivision]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalVerdictRequest"
+      responses:
+        "204":
+          description: Verdict recorded; status may transition to Approved when all four are Approved
+        "400":
+          $ref: "#/components/responses/ValidationProblem"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Conflict — order is in a state that does not accept approvals (e.g., already Deployed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /api/v1/change-orders/{id}/dates:
+    patch:
+      tags: [workflow]
+      summary: Record one or more workflow milestone dates (delivery, initial evaluation, production deploy)
+      operationId: recordMilestoneDates
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MilestoneDatesRequest"
+      responses:
+        "204":
+          description: Dates updated; status may transition (e.g., Approved → InProgress when DeliveryDate is set; InProgress → Deployed when ProductionDeployDate is set)
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: A date was provided for a milestone whose preconditions are not met
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+components:
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Page:
+      name: page
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+    OrderNumberFilter:
+      name: orderNumber
+      in: query
+      required: false
+      description: |
+        Optional prefix filter on `OrderNumber`. Accepts the full canonical
+        form (`20260513-02`) for exact lookup or just the date prefix
+        (`20260513`) to return every order created that day. Validation
+        tolerates digits and an optional dash separator only.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 13
+        pattern: '^\d{1,8}(-\d{1,2})?$'
+        example: '20260513-02'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated key (e.g., a UUID) used to deduplicate retried submissions within the 24h retention window.
+      schema: { type: string, minLength: 8, maxLength: 64 }
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+    ValidationProblem:
+      description: Validation failure
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          description: Seconds until the next window opens
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
+
+  schemas:
+    OrderStatus:
+      type: string
+      enum: [Draft, PendingApproval, Approved, InProgress, Deployed, Cancelled]
+    ApprovalStatus:
+      type: string
+      enum: [Pending, Approved, Rejected]
+    OrderNumber:
+      type: string
+      pattern: '^\d{8}-\d{2}$'
+      example: "20260512-01"
+      description: Identifier of the form yyyyMMdd-## (UTC date prefix, 2-digit daily sequence).
+    RequesterInfo:
+      type: object
+      required: [name, position, department, email]
+      properties:
+        name:        { type: string, minLength: 1, maxLength: 150 }
+        position:    { type: string, minLength: 1, maxLength: 100 }
+        department:  { type: string, minLength: 1, maxLength: 100 }
+        email:       { type: string, format: email, maxLength: 200 }
+    ApprovalChain:
+      type: object
+      required: [requesterApproval, departmentHeadApproval, itHeadApproval, programmingDivisionApproval]
+      properties:
+        requesterApproval:            { $ref: "#/components/schemas/ApprovalStatus" }
+        departmentHeadApproval:       { $ref: "#/components/schemas/ApprovalStatus" }
+        itHeadApproval:               { $ref: "#/components/schemas/ApprovalStatus" }
+        programmingDivisionApproval:  { $ref: "#/components/schemas/ApprovalStatus" }
+    CreateOrderRequest:
+      type: object
+      required: [programName, productionVersion, workDescription, requestDetails, justification, requiredAction, requester]
+      properties:
+        programName:              { type: string, minLength: 1, maxLength: 200 }
+        productionVersion:        { type: string, minLength: 1, maxLength: 50 }
+        versionScreenshotPath:    { type: string, maxLength: 500, nullable: true }
+        workDescription:          { type: string, minLength: 1, maxLength: 2000 }
+        requestDetails:           { type: string, minLength: 1, maxLength: 4000 }
+        justification:            { type: string, minLength: 1, maxLength: 2000 }
+        requiredAction:           { type: string, minLength: 1, maxLength: 1000 }
+        requester:                { $ref: "#/components/schemas/RequesterInfo" }
+    UpdateOrderRequest:
+      description: PUT body. Only allowed while order is in Draft (FR-006). Must include the `rowVersion` previously received from a GET to enable optimistic concurrency (FR-013).
+      allOf:
+        - $ref: "#/components/schemas/CreateOrderRequest"
+        - type: object
+          required: [rowVersion]
+          properties:
+            rowVersion:
+              type: string
+              format: byte
+              description: Base64-encoded concurrency token (SQL Server `rowversion`). The same token received in the last GET; mismatched tokens cause HTTP 409 Conflict.
+    ApprovalVerdictRequest:
+      type: object
+      required: [verdict]
+      properties:
+        verdict:
+          $ref: "#/components/schemas/ApprovalStatus"
+          description: One of Pending | Approved | Rejected (Pending is allowed to undo a previous verdict).
+    MilestoneDatesRequest:
+      type: object
+      description: All fields optional; provide one or more milestones to update. Setting a milestone may trigger an OrderStatus transition.
+      properties:
+        deliveryDate:           { type: string, format: date-time, nullable: true }
+        initialEvaluationDate:  { type: string, format: date-time, nullable: true }
+        productionDeployDate:   { type: string, format: date-time, nullable: true }
+        postDeployScreenshotPath: { type: string, maxLength: 500, nullable: true }
+    OrderResponse:
+      type: object
+      required: [id, orderNumber, status, programName, productionVersion, workDescription, requestDetails, justification, requiredAction, requester, approvalChain, requestDate, createdAt]
+      properties:
+        id:                        { type: string, format: uuid }
+        orderNumber:               { $ref: "#/components/schemas/OrderNumber" }
+        status:                    { $ref: "#/components/schemas/OrderStatus" }
+        programName:               { type: string }
+        productionVersion:         { type: string }
+        versionScreenshotPath:     { type: string, nullable: true }
+        workDescription:           { type: string }
+        requestDetails:            { type: string }
+        justification:             { type: string }
+        requiredAction:            { type: string }
+        requester:                 { $ref: "#/components/schemas/RequesterInfo" }
+        approvalChain:             { $ref: "#/components/schemas/ApprovalChain" }
+        requestDate:               { type: string, format: date-time }
+        deliveryDate:              { type: string, format: date-time, nullable: true }
+        initialEvaluationDate:     { type: string, format: date-time, nullable: true }
+        productionDeployDate:      { type: string, format: date-time, nullable: true }
+        postDeployScreenshotPath:  { type: string, nullable: true }
+        createdAt:                 { type: string, format: date-time }
+        updatedAt:                 { type: string, format: date-time, nullable: true }
+        rowVersion:                { type: string, format: byte, description: "Base64-encoded concurrency token (FR-013). Must be echoed back in PUT/PATCH requests." }
+    PagedOrderResponse:
+      type: object
+      required: [items, totalCount, page, pageSize]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/OrderResponse" }
+        totalCount: { type: integer, minimum: 0 }
+        page:       { type: integer, minimum: 1 }
+        pageSize:   { type: integer, minimum: 1, maximum: 50 }
+    VersionResponse:
+      type: object
+      required: [name, version, environment]
+      properties:
+        name:
+          type: string
+          description: Logical service name.
+          example: ChangeOrder.Api
+        version:
+          type: string
+          description: Semantic version of the running build (any `+sha` suffix stripped).
+          example: 1.0.0
+        environment:
+          type: string
+          description: Hosting environment name (`Development`, `Staging`, `Production`, ...).
+          example: Development
+    HealthReport:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [Healthy, Degraded, Unhealthy]
+        checks:
+          type: array
+          items:
+            type: object
+            properties:
+              name:        { type: string }
+              status:      { type: string, enum: [Healthy, Degraded, Unhealthy] }
+              description: { type: string, nullable: true }
+              duration:    { type: string, description: "ISO-8601 duration" }
+    ProblemDetails:
+      type: object
+      description: RFC 7807 Problem Details payload with a domain error code in the `code` extension.
+      required: [type, title, status]
+      properties:
+        type:     { type: string, format: uri }
+        title:    { type: string }
+        status:   { type: integer }
+        detail:   { type: string }
+        instance: { type: string, format: uri }
+        code:     { type: string, description: "Stable machine-readable code, e.g., order.not_found, order.duplicate_number, order.invalid_transition, order.edit_after_draft, order.daily_sequence_exhausted, idempotency.payload_divergence" }
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }

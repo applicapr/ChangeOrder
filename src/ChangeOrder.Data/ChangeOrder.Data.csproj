@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Data layer — EF Core Code-First, repositories, interceptors, migrations.
+    Depends ONLY on Domain (Onion P-I).
+    Package versions pinned to the latest stable 10.0.x at bootstrap time.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>ChangeOrder.Data</RootNamespace>
+    <AssemblyName>ChangeOrder.Data</AssemblyName>
+
+    <!-- Version: bumped by release-please on each release.
+         FileVersion: updated post-release with the build date (yyyy.M.d.0). -->
+    <Version>1.0.0</Version>
+    <FileVersion>2026.5.13.0</FileVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ChangeOrder.Domain\ChangeOrder.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

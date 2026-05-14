@@ -1,0 +1,125 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  PROJECT_PATH: src/ChangeOrder.Host/ChangeOrder.Host.csproj
+  PUBLISH_DIR: ./publish
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+
+    steps:
+      - name: Run Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Calculate FileVersion
+        shell: pwsh
+        run: |
+          $fileVersion = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId(
+            [datetime]::UtcNow, 'America/Puerto_Rico'
+          ).ToString('yyyy.M.d.0')
+          echo "FILE_VERSION=$fileVersion" >> $env:GITHUB_ENV
+          Write-Host "FileVersion: $fileVersion"
+
+      - name: Restore dependencies
+        run: dotnet restore ChangeOrder.slnx
+
+      - name: Run tests
+        run: >-
+          dotnet test ChangeOrder.slnx
+          --configuration Release
+          --filter "Category!=Testcontainers&Category!=RateLimit&Category!=Performance"
+
+      - name: Publish
+        shell: pwsh
+        run: >
+          dotnet publish ${{ env.PROJECT_PATH }}
+          -c Release
+          -p:DebugType=none
+          -p:GenerateDocumentationFile=false
+          -p:FileVersion=${{ env.FILE_VERSION }}
+          -o ${{ env.PUBLISH_DIR }}
+
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          $tag = "${{ needs.release-please.outputs.tag_name }}"
+          Compress-Archive -Path "${{ env.PUBLISH_DIR }}/*" -DestinationPath "changeorder-api-$tag-linux-x64.zip"
+
+      - name: Upload release artifact
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release-please.outputs.tag_name }}
+          files: "changeorder-api-${{ needs.release-please.outputs.tag_name }}-linux-x64.zip"
+          draft: false
+          prerelease: ${{ contains(needs.release-please.outputs.tag_name, '-rc') || contains(needs.release-please.outputs.tag_name, '-beta') }}
+
+      - name: Clean build artifacts
+        shell: pwsh
+        run: |
+          Remove-Item -Path "*.zip" -Force
+          Remove-Item -Path ${{ env.PUBLISH_DIR }} -Recurse -Force
+
+      - name: Update FileVersion in .csproj files
+        shell: pwsh
+        run: |
+          $fileVersion = $env:FILE_VERSION
+          $csprojFiles = @(
+            "src/ChangeOrder.Domain/ChangeOrder.Domain.csproj",
+            "src/ChangeOrder.Business/ChangeOrder.Business.csproj",
+            "src/ChangeOrder.Data/ChangeOrder.Data.csproj",
+            "src/ChangeOrder.Presentation/ChangeOrder.Presentation.csproj",
+            "src/ChangeOrder.Host/ChangeOrder.Host.csproj"
+          )
+          foreach ($csproj in $csprojFiles) {
+            $content = Get-Content $csproj -Raw
+            $content = $content -replace '<FileVersion>[^<]*</FileVersion>', "<FileVersion>$fileVersion</FileVersion>"
+            Set-Content -Path $csproj -Value $content -NoNewline
+            Write-Host "Updated $csproj with FileVersion=$fileVersion"
+          }
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: actualizar FileVersion a ${{ env.FILE_VERSION }}"
+          title: "chore: actualizar FileVersion a ${{ env.FILE_VERSION }}"
+          body: |
+            Actualizacion automatica de `<FileVersion>` en los `.csproj` despues del release.
+            - FileVersion: `${{ env.FILE_VERSION }}`
+            - Este valor se usa en builds locales para mostrar la fecha del ultimo build de produccion
+          branch: chore/update-fileversion
+          delete-branch: true
+          labels: automated

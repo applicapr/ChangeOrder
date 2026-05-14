@@ -1,0 +1,38 @@
+# Solo afecta al build context del Dockerfile de la API (src/ChangeOrder.Host/Dockerfile).
+# El sidecar `migrations` usa bind mount, no se ve afectado por este archivo.
+
+# Build artifacts
+**/bin/
+**/obj/
+**/bin\Debug/
+**/logs/
+
+# VCS / IDE / OS
+.git/
+.gitignore
+.github/
+.idea/
+.vs/
+.vscode/
+.DS_Store
+
+# Tests (no van al runtime image)
+tests/
+
+# Docs y specs no se compilan
+Docs/
+specs/
+.specify/
+*.md
+LICENSE
+
+# Local AI / per-developer
+CLAUDE.md
+.engram/
+.claude/
+
+# Docker / env (no copiar al image)
+docker-compose*.yml
+.env*
+.dockerignore
+src/ChangeOrder.Host/Dockerfile

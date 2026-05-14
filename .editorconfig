@@ -1,0 +1,103 @@
+# EditorConfig is awesome: https://editorconfig.org/
+# Repo-wide coding style for ChangeOrder.
+# Aligns with /Users/jlara/.claude/CLAUDE.md (code preferences) and Docs/ChangeOrder.Api.Rules.md.
+
+root = true
+
+###############################
+# All files
+###############################
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+###############################
+# Markdown / YAML / JSON
+###############################
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{yml,yaml,json}]
+indent_size = 2
+
+###############################
+# C# files
+###############################
+[*.cs]
+# Advisory max line length (not enforced by Roslyn, used by IDEs/formatters)
+max_line_length = 160
+
+# File-scoped namespaces (NON-NEGOTIABLE)
+csharp_style_namespace_declarations = file_scoped:error
+
+# Prefer 'var' OFF — explicit types (global rule)
+csharp_style_var_for_built_in_types = false:warning
+csharp_style_var_when_type_is_apparent = false:warning
+csharp_style_var_elsewhere = false:warning
+
+# Always show accessibility modifiers
+dotnet_style_require_accessibility_modifiers = always:warning
+
+# Modifier ordering
+csharp_preferred_modifier_order = public,private,protected,internal,file,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,required,volatile,async:warning
+
+# Expression-bodied prefs (gentle)
+csharp_style_expression_bodied_methods = when_on_single_line:silent
+csharp_style_expression_bodied_constructors = false:silent
+csharp_style_expression_bodied_operators = when_on_single_line:silent
+csharp_style_expression_bodied_properties = when_on_single_line:silent
+csharp_style_expression_bodied_indexers = when_on_single_line:silent
+csharp_style_expression_bodied_accessors = when_on_single_line:silent
+
+# Pattern matching / null preferences (modern C#)
+csharp_style_prefer_pattern_matching = true:suggestion
+csharp_style_prefer_switch_expression = true:suggestion
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
+csharp_style_throw_expression = true:suggestion
+csharp_style_conditional_delegate_call = true:suggestion
+
+# Guard clauses / early return preferred (global rule)
+dotnet_style_prefer_conditional_expression_over_return = false:suggestion
+dotnet_style_prefer_conditional_expression_over_assignment = false:suggestion
+
+# 'this.' qualification — off (project convention)
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+dotnet_style_qualification_for_event = false:warning
+
+# Predefined type names over BCL
+dotnet_style_predefined_type_for_locals_parameters_members = true:warning
+dotnet_style_predefined_type_for_member_access = true:warning
+
+# Sort using directives
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# StringComparison enforcement (CA1309/CA1310)
+dotnet_diagnostic.CA1309.severity = warning
+dotnet_diagnostic.CA1310.severity = warning
+
+# ConfigureAwait awareness handled at Code Review (no analyzer rule globally enabled here)
+
+###############################
+# Test projects — relax XML docs + permit underscore-named methods
+###############################
+[tests/**/*.cs]
+# Tests don't need XML docs on every public member
+dotnet_diagnostic.CS1591.severity = none
+# Convention: MethodUnderTest_Scenario_ExpectedResult (constitution §Testing stack)
+dotnet_diagnostic.CA1707.severity = none
+
+###############################
+# EF Core migrations — auto-generated; relax our style rules
+###############################
+[src/**/Migrations/*.cs]
+dotnet_diagnostic.IDE0161.severity = none
+dotnet_diagnostic.CS1591.severity = none
+generated_code = true

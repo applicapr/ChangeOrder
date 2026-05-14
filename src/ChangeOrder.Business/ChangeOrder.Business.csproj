@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Business layer — Commands/Queries/Handlers (CQRS, feature-sliced).
+    Depends ONLY on Domain.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>ChangeOrder.Business</RootNamespace>
+    <AssemblyName>ChangeOrder.Business</AssemblyName>
+
+    <!-- Version: bumped by release-please on each release.
+         FileVersion: updated post-release with the build date (yyyy.M.d.0). -->
+    <Version>1.0.0</Version>
+    <FileVersion>2026.5.13.0</FileVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ChangeOrder.Domain\ChangeOrder.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ChangeOrder.Business.Tests" />
+  </ItemGroup>
+
+</Project>
