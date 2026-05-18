@@ -29,6 +29,7 @@ Cuando un ADR queda obsoleto, **no se borra ni se edita el cuerpo** — se crea 
 | [0006](0006-slnx-solution-format.md) | Adopción del formato `.slnx` | Accepted | 2026-05-12 |
 | [0007](0007-manual-docker-image-publishing.md) | Publicación manual de imágenes Docker | Accepted | 2026-05-14 |
 | [0008](0008-nuget-http2-environment-workaround.md) | Workaround HTTP/2 + IPv6 para `dotnet restore` | Accepted | 2026-05-12 |
+| [0009](0009-eda-domain-events-outbox.md) | Domain Events + Outbox Pattern para notificaciones y escalamientos por tiempo | Proposed | 2026-05-18 |
 
 ## Cómo añadir un ADR nuevo
 
