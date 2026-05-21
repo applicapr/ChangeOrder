@@ -9,7 +9,7 @@ Define el modelo de dominio completo del sistema de Control de Órdenes de Cambi
 entidades, value objects, enums, interfaces e interfaces de auditoría.
 
 ## Estructura
-
+```
 ChangeOrder.Domain/
 ├── Entities/
 │   └── ChangeOrderEntity.cs       # Aggregate Root — entidad principal
@@ -28,7 +28,7 @@ ChangeOrder.Domain/
 └── Errors/
 ├── Error.cs                       # Record base de errores de negocio
 └── DomainErrors.cs                # Errores específicos del dominio
-
+```
 ## Componentes
 
 ### Entidad Principal — `ChangeOrderEntity`
