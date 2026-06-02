@@ -23,12 +23,12 @@ public class ChangeOrderEntity : IAuditable, ISoftDeletable
     /// <summary>
     /// Nombre del programa o módulo a cambiar
     /// </summary>
-    public required string ProgramName { get; init; }
+    public required string ProgramName { get; set; }
 
     /// <summary>
     /// Versión en producción antes del cambio
     /// </summary>
-    public required string ProductionVersion { get; init; }
+    public required string ProductionVersion { get; set; }
 
     /// <summary>
     /// Ruta al screenshot de la versión antes del cambio. Opcional
@@ -43,22 +43,22 @@ public class ChangeOrderEntity : IAuditable, ISoftDeletable
     /// <summary>
     /// Descripción breve del trabajo solicitado
     /// </summary>
-    public required string WorkDescription { get; init; }
+    public required string WorkDescription { get; set; }
 
     /// <summary>
     /// Detalle completo de la solicitud
     /// </summary>
-    public required string RequestDetails { get; init; }
+    public required string RequestDetails { get; set; }
 
     /// <summary>
     /// Justificación del negocio para el cambio
     /// </summary>
-    public required string Justification { get; init; }
+    public required string Justification { get; set; }
 
     /// <summary>
     /// Acción requerida al programador
     /// </summary>
-    public required string RequiredAction { get; init; }
+    public required string RequiredAction { get; set; }
 
     /// <summary>
     /// Información del solicitante — nombre, cargo, departamento y email
@@ -73,7 +73,7 @@ public class ChangeOrderEntity : IAuditable, ISoftDeletable
     /// <summary>
     /// Estado del ciclo de vida de la orden
     /// </summary>
-    public required OrderStatus Status { get; init; }
+    public required OrderStatus Status { get; set; }
 
     /// <summary>
     /// Fecha estimada de entrega. Opcional
