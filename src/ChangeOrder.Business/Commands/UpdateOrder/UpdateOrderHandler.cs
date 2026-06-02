@@ -6,7 +6,7 @@ using ChangeOrder.Domain.Errors;
 namespace ChangeOrder.Business.Commands.UpdateOrder;
 
 /// <summary>
-/// 
+/// Handler para actualizar una orden de cambio existente 
 /// </summary>
 
 public sealed class UpdateOrderHandler : ICommandHandler<UpdateOrderCommand, Guid>
@@ -15,7 +15,7 @@ public sealed class UpdateOrderHandler : ICommandHandler<UpdateOrderCommand, Gui
     private readonly IUnitOfWork _unitOfWork;
 
     /// <summary>
-    /// 
+    /// Inicializa el handler con sus dependencias.
     /// </summary>
 
     public UpdateOrderHandler(
@@ -27,7 +27,7 @@ public sealed class UpdateOrderHandler : ICommandHandler<UpdateOrderCommand, Gui
     }
 
     /// <summary>
-    /// 
+    /// Ejecuta la actualización de la orden. Retorna error si la orden no existe
     /// </summary>
 
 
@@ -37,7 +37,7 @@ public sealed class UpdateOrderHandler : ICommandHandler<UpdateOrderCommand, Gui
     {
         ChangeOrderEntity? order = await _repository.GetByIdAsync(command.Id, ct);
 
-        if (order == null)
+        if (order is null)
             return Result<Guid, Error>.Failure(DomainErrors.Order.NotFound);
 
         order.ProgramName = command.ProgramName;

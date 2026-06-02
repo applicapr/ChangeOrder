@@ -6,7 +6,7 @@ using ChangeOrder.Domain.Errors;
 namespace ChangeOrder.Business.Commands.DeleteOrder;
 
 /// <summary>
-/// 
+/// Handler para eliminar lógicamente una orden de cambio
 /// </summary>
 
 public sealed class DeleteOrderHandler : ICommandHandler<DeleteOrderCommand, Guid>
@@ -15,7 +15,7 @@ public sealed class DeleteOrderHandler : ICommandHandler<DeleteOrderCommand, Gui
     private readonly IUnitOfWork _unitOfWork;
 
     /// <summary>
-    /// 
+    /// Inicializa el handler con sus dependencias
     /// </summary>
 
     public DeleteOrderHandler(
@@ -27,7 +27,7 @@ public sealed class DeleteOrderHandler : ICommandHandler<DeleteOrderCommand, Gui
     }
 
     /// <summary>
-    /// 
+    /// Ejecuta el borrado lógico de la orden. Retorna error si la orden no existe
     /// </summary>
 
     public async Task<Result<Guid, Error>> HandleAsync(
@@ -35,7 +35,7 @@ public sealed class DeleteOrderHandler : ICommandHandler<DeleteOrderCommand, Gui
         CancellationToken ct)
     {
         ChangeOrderEntity? order = await _repository.GetByIdAsync(command.Id, ct);
-        if (order == null)
+        if (order is null)
             return Result<Guid, Error>.Failure(DomainErrors.Order.NotFound);
 
         _repository.Delete(order);

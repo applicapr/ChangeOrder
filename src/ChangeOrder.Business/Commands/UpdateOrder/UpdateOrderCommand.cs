@@ -3,7 +3,7 @@ using ChangeOrder.Domain.Enums;
 namespace ChangeOrder.Business.Commands.UpdateOrder;
 
 /// <summary>
-/// 
+/// Command para actualizar los campos modificables de una orden de cambio existente
 /// </summary>
 
 public sealed record UpdateOrderCommand(

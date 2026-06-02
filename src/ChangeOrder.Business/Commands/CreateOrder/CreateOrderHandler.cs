@@ -8,7 +8,7 @@ using ChangeOrder.Domain.ValueObjects;
 namespace ChangeOrder.Business.Commands.CreateOrder;
 
 /// <summary>
-/// 
+/// Handler para crear una nueva orden de cambio
 /// </summary>
 
 public sealed class CreateOrderHandler : ICommandHandler<CreateOrderCommand, Guid>
@@ -19,7 +19,7 @@ public sealed class CreateOrderHandler : ICommandHandler<CreateOrderCommand, Gui
 
 
     /// <summary>
-    /// 
+    /// Inicializa el handler con sus dependencias
     /// </summary>
 
     public CreateOrderHandler(
@@ -34,9 +34,9 @@ public sealed class CreateOrderHandler : ICommandHandler<CreateOrderCommand, Gui
     }
 
     /// <summary>
-    /// 
+    /// Ejecuta la creación de la orden — genera el número, crea la entidad y persist
     /// </summary>
-    
+
     public async Task<Result<Guid, Error>> HandleAsync(
     CreateOrderCommand command,
     CancellationToken ct)
