@@ -14,33 +14,34 @@ Orquesta todas las operaciones del sistema — crear, actualizar, eliminar y con
 ```
 ChangeOrder.Business/
 ├── Abstractions/
-│   ├── ICommandHandler.cs          # Contrato genérico para handlers de Commands
-│   ├── IQueryHandler.cs            # Contrato genérico para handlers de Queries
-│   └── IOrderNumberGenerator.cs   # Contrato para el generador de números de orden
+│   ├── ICommandHandler.cs             # Contrato genérico para handlers de Commands
+│   ├── IQueryHandler.cs               # Contrato genérico para handlers de Queries
+│   └── IOrderNumberGenerator.cs       # Contrato para el generador de números de orden
 ├── Commands/
 │   ├── CreateOrder/
-│   │   ├── CreateOrderCommand.cs   # Datos para crear una orden
-│   │   └── CreateOrderHandler.cs   # Lógica de creación
+│   │   ├── CreateOrderCommand.cs      # Datos para crear una orden
+│   │   └── CreateOrderHandler.cs      # Lógica de creación
 │   ├── UpdateOrder/
-│   │   ├── UpdateOrderCommand.cs   # Datos para actualizar una orden
-│   │   └── UpdateOrderHandler.cs   # Lógica de actualización
+│   │   ├── UpdateOrderCommand.cs      # Datos para actualizar una orden
+│   │   └── UpdateOrderHandler.cs      # Lógica de actualización
 │   └── DeleteOrder/
-│       ├── DeleteOrderCommand.cs   # Datos para eliminar una orden
-│       └── DeleteOrderHandler.cs   # Lógica de borrado lógico
+│       ├── DeleteOrderCommand.cs      # Datos para eliminar una orden
+│       └── DeleteOrderHandler.cs      # Lógica de borrado lógico
 ├── Queries/
 │   ├── GetOrderById/
-│   │   ├── GetOrderByIdQuery.cs    # Query por Id
-│   │   └── GetOrderByIdHandler.cs  # Busca una orden por Id
+│   │   ├── GetOrderByIdQuery.cs       # Query por Id
+│   │   └── GetOrderByIdHandler.cs     # Busca una orden por Id
 │   ├── GetAllOrders/
-│   │   ├── GetAllOrdersQuery.cs    # Query paginada
-│   │   └── GetAllOrdersHandler.cs  # Lista todas las órdenes
+│   │   ├── GetAllOrdersQuery.cs       # Query paginada
+│   │   └── GetAllOrdersHandler.cs     # Lista todas las órdenes
 │   └── GetOrdersByDate/
 │       ├── GetOrdersByDateQuery.cs    # Query por fecha
 │       └── GetOrdersByDateHandler.cs  # Lista órdenes de una fecha
-└── Services/
-    └── OrderNumberGenerator.cs     # Genera el número yyyyMMdd-##
+├── Services/
+│   └── OrderNumberGenerator.cs        # Genera el número yyyyMMdd-##
+└── Extensions/
+└── ServiceCollectionExtensions.cs     # Registro de handlers en DI
 ```
-
 ## Componentes
 
 ### CQRS — Commands vs Queries
@@ -103,6 +104,18 @@ retorna un `Result` de éxito o error:
 Result<Guid, Error>.Success(order.Id)
 Result<Guid, Error>.Failure(DomainErrors.Order.NotFound)
 ```
+
+### `ServiceCollectionExtensions`
+
+Registra todos los handlers y servicios en el contenedor de DI:
+
+- `ICommandHandler<CreateOrderCommand, Guid>` → `CreateOrderHandler`
+- `ICommandHandler<UpdateOrderCommand, Guid>` → `UpdateOrderHandler`
+- `ICommandHandler<DeleteOrderCommand, Guid>` → `DeleteOrderHandler`
+- `IQueryHandler<GetOrderByIdQuery, ChangeOrderEntity>` → `GetOrderByIdHandler`
+- `IQueryHandler<GetAllOrdersQuery, IReadOnlyList<ChangeOrderEntity>>` → `GetAllOrdersHandler`
+- `IQueryHandler<GetOrdersByDateQuery, IReadOnlyList<ChangeOrderEntity>>` → `GetOrdersByDateHandler`
+- `IOrderNumberGenerator` → `OrderNumberGenerator`
 
 ## Reglas
 
