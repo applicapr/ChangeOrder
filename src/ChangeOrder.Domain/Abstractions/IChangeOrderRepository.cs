@@ -14,10 +14,10 @@ public interface IChangeOrderRepository
     /// </summary>
     public Task<ChangeOrderEntity?> GetByIdAsync(Guid id, CancellationToken ct);
 
-    /////<summary>
-    ///// 
-    /////</summary>
-    //public Task<PagedResponse<ChangeOrderEntity>> GetAllAsync(PagedRequest request, CancellationToken ct);
+    /// <summary>
+    /// Obtiene todas las órdenes de cambio.
+    /// </summary>
+    public Task<IReadOnlyList<ChangeOrderEntity>> GetAllAsync(CancellationToken ct);
 
     /// <summary>
     /// Obtiene las órdenes de una fecha específica

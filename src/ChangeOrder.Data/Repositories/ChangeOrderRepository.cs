@@ -33,6 +33,15 @@ public sealed class ChangeOrderRepository : IChangeOrderRepository
     }
 
     /// <summary>
+    /// Obtiene todas las órdenes de cambio.
+    /// </summary>
+
+    public async Task<IReadOnlyList<ChangeOrderEntity>> GetAllAsync(CancellationToken ct)
+    {
+        return await _context.ChangeOrders.ToListAsync(ct);
+    }
+
+    /// <summary>
     /// Obtiene todas las órdenes de una fecha específica.
     /// </summary>
 
@@ -52,7 +61,7 @@ public sealed class ChangeOrderRepository : IChangeOrderRepository
         int count = await _context.ChangeOrders
             .CountAsync(x => x.RequestDate.Date == date.Date, ct);
         return count + 1;
-            
+
     }
 
     /// <summary>

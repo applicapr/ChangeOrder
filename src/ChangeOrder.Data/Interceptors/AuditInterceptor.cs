@@ -6,13 +6,15 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 namespace ChangeOrder.Data.Interceptors;
 
 /// <summary>
-/// Interceptor de EF Core que gestiona auditoría y soft-delete automáticamente antes de cada SaveChangesAsync.
+/// Interceptor de EF Core que gestiona auditoría y soft-delete automáticamente
+/// antes de cada SaveChangesAsync.
 /// </summary>
 
 public sealed class AuditInterceptor : SaveChangesInterceptor
 {
     /// <summary>
-    /// Intercepta el guardado de cambios para actualizar timestamps de auditoría y convertir eliminaciones físicas en borrado lógico.
+    /// Intercepta el guardado de cambios para actualizar timestamps de auditoría
+    /// y convertir eliminaciones físicas en borrado lógico.
     /// </summary>
 
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
@@ -42,6 +44,17 @@ public sealed class AuditInterceptor : SaveChangesInterceptor
             entry.State = EntityState.Modified;
             entry.Entity.IsDeleted = true;
             entry.Entity.DeletedAt = now;
+
+            // Cascadea el cambio de estado a las entidades owned
+            // (Requester, Approval, Number) para evitar que EF Core
+            // intente poner sus columnas NOT NULL en NULL.
+            foreach (NavigationEntry navigation in entry.Navigations)
+            {
+                if (navigation is ReferenceEntry { TargetEntry: { State: EntityState.Deleted } target })
+                {
+                    target.State = EntityState.Modified;
+                }
+            }
         }
         return base.SavingChangesAsync(eventData, result, cancellationToken);
     }

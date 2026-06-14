@@ -1,23 +1,44 @@
-var builder = WebApplication.CreateBuilder(args);
+using ChangeOrder.Business.Extensions;
+using ChangeOrder.Data.Extensions;
+using ChangeOrder.Presentation.Extensions;
+using Scalar.AspNetCore;
+using Serilog;
 
-// Add services to the container.
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+// Serilog
+builder.Host.UseSerilog((ctx, cfg) =>
+    cfg.ReadFrom.Configuration(ctx.Configuration));
 
-var app = builder.Build();
+// Servicios
+string connectionString = builder.Configuration
+    .GetConnectionString("DefaultConnection")!;
 
-// Configure the HTTP request pipeline.
+builder.Services.AddDataServices(connectionString);
+builder.Services.AddBusinessServices();
+builder.Services.AddPresentationServices();
+
+// OpenAPI
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((doc, ctx, ct) =>
+    {
+        doc.Info.Title = "ChangeOrder API";
+        doc.Info.Version = "v1";
+        doc.Info.Description = "Sistema de Control de Órdenes de Cambio";
+        return Task.CompletedTask;
+    });
+});
+
+WebApplication app = builder.Build();
+
+// Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
+app.MapPresentationEndpoints();
 
 app.Run();

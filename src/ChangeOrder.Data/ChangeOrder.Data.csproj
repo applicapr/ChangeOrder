@@ -18,4 +18,12 @@
     <ProjectReference Include="..\ChangeOrder.Domain\ChangeOrder.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EditorConfigFiles Remove="C:\Users\jhein\Documents\ChangeOrder\src\ChangeOrder.Data\Migrations\.editorconfig" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="C:\Users\jhein\Documents\ChangeOrder\src\ChangeOrder.Data\Migrations\.editorconfig" />
+  </ItemGroup>
+
 </Project>

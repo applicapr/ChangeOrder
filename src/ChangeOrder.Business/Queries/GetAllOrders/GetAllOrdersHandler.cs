@@ -23,15 +23,13 @@ public sealed class GetAllOrdersHandler : IQueryHandler<GetAllOrdersQuery, IRead
 
     /// <summary>
     /// Ejecuta la consulta y retorna la lista de órdenes.
-    /// Pendiente: implementar paginación cuando GetAllAsync esté disponible
+    /// Pendiente: implementar paginación con Page y PageSize de la query
     /// </summary>
 
     public async Task<Result<IReadOnlyList<ChangeOrderEntity>, Error>> HandleAsync(
     GetAllOrdersQuery query, CancellationToken ct)
     {
-        // TODO: Implementar cuando GetAllAsync esté disponible
-        IReadOnlyList<ChangeOrderEntity> orders = await _repository
-            .GetByDateAsync(DateTime.UtcNow, ct);
+        IReadOnlyList<ChangeOrderEntity> orders = await _repository.GetAllAsync(ct);
         return Result<IReadOnlyList<ChangeOrderEntity>, Error>.Success(orders);
     }
 }

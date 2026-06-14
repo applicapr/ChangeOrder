@@ -1,6 +1,0 @@
-@ChangeOrder.Host_HostAddress = http://localhost:5151
-
-GET {{ChangeOrder.Host_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

@@ -26,7 +26,7 @@ public static class ServiceCollectionExtensions
             options.UseSqlServer(connectionString)
                    .AddInterceptors(sp.GetRequiredService<AuditInterceptor>()));
         services.AddScoped<IChangeOrderRepository, ChangeOrderRepository>();
-        services.AddScoped<IUnitOfWork, ChangeOrderDbContext>();
+        services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<ChangeOrderDbContext>());
         return services;
     }
 }
