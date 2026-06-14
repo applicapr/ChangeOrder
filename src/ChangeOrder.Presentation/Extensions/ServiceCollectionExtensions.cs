@@ -29,6 +29,7 @@ public static class ServiceCollectionExtensions
     public static IEndpointRouteBuilder MapPresentationEndpoints(
         this IEndpointRouteBuilder app)
     {
+        app.MapChangeOrderEndpoints();
         return app;
     }
 }

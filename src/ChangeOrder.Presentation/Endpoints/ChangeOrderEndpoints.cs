@@ -50,10 +50,10 @@ public static class ChangeOrderEndpoints
 
         // GET todos
         group.MapGet("", async (
-            int page,
-            int pageSize,
             IQueryHandler<GetAllOrdersQuery, IReadOnlyList<ChangeOrderEntity>> handler,
-            CancellationToken ct) =>
+            CancellationToken ct,
+            int page = 1,
+            int pageSize = 10) =>
         {
             Result<IReadOnlyList<ChangeOrderEntity>, Error> result =
                 await handler.HandleAsync(new GetAllOrdersQuery(page, pageSize), ct);
