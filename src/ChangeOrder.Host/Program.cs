@@ -18,6 +18,10 @@ builder.Services.AddDataServices(connectionString);
 builder.Services.AddBusinessServices();
 builder.Services.AddPresentationServices();
 
+// Health Checks
+builder.Services.AddHealthChecks()
+    .AddSqlServer(connectionString, name: "sqlserver");
+
 // OpenAPI
 builder.Services.AddOpenApi(options =>
 {
@@ -40,5 +44,19 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapPresentationEndpoints();
+app.MapHealthChecks("/health");
+
+app.MapGet("/version", () =>
+{
+    System.Reflection.AssemblyName assemblyName =
+        System.Reflection.Assembly.GetExecutingAssembly().GetName();
+
+    return Results.Ok(new
+    {
+        name = assemblyName.Name,
+        version = assemblyName.Version?.ToString(),
+        environment = app.Environment.EnvironmentName
+    });
+});
 
 app.Run();
