@@ -1,6 +1,7 @@
 using ChangeOrder.Business.Abstractions;
 using ChangeOrder.Business.Commands.CreateOrder;
 using ChangeOrder.Business.Commands.DeleteOrder;
+using ChangeOrder.Business.Commands.SetApproval;
 using ChangeOrder.Business.Commands.SetOrderDates;
 using ChangeOrder.Business.Commands.UpdateOrder;
 using ChangeOrder.Business.Queries.GetAllOrders;
@@ -165,6 +166,24 @@ public static class ChangeOrderEndpoints
 
             return Results.NoContent();
         }).WithName("SetOrderDates");
+
+        // PUT aprobación por nivel
+        group.MapPut("{id:guid}/approvals/{level}", async (
+            Guid id,
+            string level,
+            SetApprovalRequest request,
+            ICommandHandler<SetApprovalCommand, Guid> handler,
+            CancellationToken ct) =>
+        {
+            SetApprovalCommand command = new(id, level, request.Verdict);
+
+            Result<Guid, Error> result = await handler.HandleAsync(command, ct);
+
+            if (!result.IsSuccess)
+                return Results.NotFound(result.Error);
+
+            return Results.NoContent();
+        }).WithName("SetApproval");
 
         return app;
     }

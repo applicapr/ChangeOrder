@@ -1,6 +1,7 @@
 using ChangeOrder.Business.Abstractions;
 using ChangeOrder.Business.Commands.CreateOrder;
 using ChangeOrder.Business.Commands.DeleteOrder;
+using ChangeOrder.Business.Commands.SetApproval;
 using ChangeOrder.Business.Commands.SetOrderDates;
 using ChangeOrder.Business.Commands.UpdateOrder;
 using ChangeOrder.Business.Queries.GetAllOrders;
@@ -33,6 +34,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IQueryHandler<GetOrdersByDateQuery, IReadOnlyList<ChangeOrderEntity>>, GetOrdersByDateHandler>();
         services.AddScoped<IOrderNumberGenerator, OrderNumberGenerator>();
         services.AddScoped<ICommandHandler<SetOrderDatesCommand, Guid>, SetOrderDatesHandler>();
+        services.AddScoped<ICommandHandler<SetApprovalCommand, Guid>, SetApprovalHandler>();
         return services;
     }
 }
