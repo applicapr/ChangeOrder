@@ -16,5 +16,6 @@ public sealed record UpdateOrderCommand(
     string Justification,
     string RequiredAction,
     DateTime? DeliveryDate,
-    OrderStatus Status
+    OrderStatus Status,
+    byte[] RowVersion
 );

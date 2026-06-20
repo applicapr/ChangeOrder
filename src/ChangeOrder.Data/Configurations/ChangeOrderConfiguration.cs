@@ -88,5 +88,9 @@ public sealed class ChangeOrderConfiguration : IEntityTypeConfiguration<ChangeOr
         builder.Property(x => x.IsDeleted).IsRequired().HasDefaultValue(false);
         builder.Property(x => x.DeletedAt);
         builder.HasQueryFilter(x => !x.IsDeleted);
+
+        // --- Concurrencia optimista ---
+        builder.Property(x => x.RowVersion)
+        .IsRowVersion();
     }
 }

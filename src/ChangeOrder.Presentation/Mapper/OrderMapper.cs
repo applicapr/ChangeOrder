@@ -17,7 +17,8 @@ public static class OrderMapper
         ProgramName: entity.ProgramName,
         RequestDate: entity.RequestDate,
         RequesterName: entity.Requester.Name,
-        Status: entity.Status.ToString());
+        Status: entity.Status.ToString(),
+        RowVersion: entity.RowVersion);
 
     /// <summary>
     /// Convierte una lista de entidades en una lista de OrderResponse.

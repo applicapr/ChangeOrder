@@ -28,4 +28,21 @@ options)
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ChangeOrderDbContext).Assembly);
     }
+
+    /// <summary>
+    /// Guarda los cambios pendientes. Traduce DbUpdateConcurrencyException de EF Core
+    /// a ConcurrencyException del dominio, para que Business no dependa de EF Core.
+    /// </summary>
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ChangeOrder.Domain.Errors.ConcurrencyException();
+        }
+    }
 }

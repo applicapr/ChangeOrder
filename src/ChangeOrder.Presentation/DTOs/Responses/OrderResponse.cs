@@ -10,5 +10,6 @@ public sealed record OrderResponse(
     string ProgramName,
     DateTime RequestDate,
     string RequesterName,
-    string Status
+    string Status,
+    byte[] RowVersion
 );
