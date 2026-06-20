@@ -119,11 +119,24 @@ public sealed class ChangeOrderRepository : IChangeOrderRepository
     }
 
     /// <summary>
-    /// Agrega un nuevo registro de idempotencia sin guardar — lo maneja el UnitOfWork. 
+    /// Agrega un nuevo registro de idempotencia sin guardar — lo maneja el UnitOfWork.
     /// </summary>
 
     public async Task AddIdempotencyRecordAsync(IdempotencyRecord record, CancellationToken ct)
     {
         await _context.IdempotencyRecords.AddAsync(record, ct);
+    }
+
+    /// <summary>
+    /// Ejecuta un DELETE directo en SQL para los registros de idempotencia anteriores
+    /// a <paramref name="olderThan"/>. No usa el ChangeTracker ni requiere SaveChangesAsync.
+    /// Retorna la cantidad de filas eliminadas.
+    /// </summary>
+
+    public async Task<int> DeleteOldIdempotencyRecordsAsync(DateTime olderThan, CancellationToken ct)
+    {
+        return await _context.IdempotencyRecords
+            .Where(x => x.CreatedAt < olderThan)
+            .ExecuteDeleteAsync(ct);
     }
 }

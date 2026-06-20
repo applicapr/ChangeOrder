@@ -62,4 +62,10 @@ public interface IChangeOrderRepository
     /// </summary>
     public Task AddIdempotencyRecordAsync(IdempotencyRecord record, CancellationToken ct);
 
+    /// <summary>
+    /// Elimina directamente en la base de datos los registros de idempotencia
+    /// creados antes de <paramref name="olderThan"/>. Retorna la cantidad eliminada.
+    /// </summary>
+    public Task<int> DeleteOldIdempotencyRecordsAsync(DateTime olderThan, CancellationToken ct);
+
 }

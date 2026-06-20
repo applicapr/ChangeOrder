@@ -1,5 +1,6 @@
 using ChangeOrder.Business.Extensions;
 using ChangeOrder.Data.Extensions;
+using ChangeOrder.Host.Extensions;
 using ChangeOrder.Presentation.Extensions;
 using Scalar.AspNetCore;
 using Serilog;
@@ -17,6 +18,7 @@ string connectionString = builder.Configuration
 builder.Services.AddDataServices(connectionString);
 builder.Services.AddBusinessServices();
 builder.Services.AddPresentationServices();
+builder.Services.AddHostServices();
 
 // Health Checks
 builder.Services.AddHealthChecks()
