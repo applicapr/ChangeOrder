@@ -20,6 +20,12 @@ options)
     public DbSet<ChangeOrderEntity> ChangeOrders => Set<ChangeOrderEntity>();
 
     /// <summary>
+    /// Tabla de registros de idempotencia para prevenir duplicados en POST.
+    /// </summary>
+
+    public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
+
+    /// <summary>
     /// Aplica todas las configuraciones de entidades del assembly automáticamente.
     /// </summary>
 

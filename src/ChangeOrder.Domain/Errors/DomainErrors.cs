@@ -29,5 +29,10 @@ public static class DomainErrors
         /// La orden fue modificada por otro usuario. Vuelve a cargarla e intenta de nuevo.
         /// </summary>
         public static readonly Error ConcurrencyConflict = new("Order.ConcurrencyConflict", "La orden fue modificada por otro usuario.");
+
+        /// <summary>
+        /// La Idempotency-Key ya fue usada con un payload diferente.
+        /// </summary>
+        public static readonly Error IdempotencyKeyConflict = new("Order.IdempotencyKeyConflict", "La Idempotency-Key ya fue usada con datos diferentes.");
     }
 }

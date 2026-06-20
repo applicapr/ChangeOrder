@@ -1,7 +1,8 @@
+using ChangeOrder.Data.Context;
 using ChangeOrder.Domain.Abstractions;
 using ChangeOrder.Domain.Entities;
-using ChangeOrder.Data.Context;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace ChangeOrder.Data.Repositories;
 
@@ -91,7 +92,7 @@ public sealed class ChangeOrderRepository : IChangeOrderRepository
 
     public void UpdateWithConcurrencyToken(ChangeOrderEntity order, byte[] clientRowVersion)
     {
-        var entry = _context.Entry(order);
+        EntityEntry<ChangeOrderEntity> entry = _context.Entry(order);
         entry.Property(x => x.RowVersion).OriginalValue = clientRowVersion;
 
         if (entry.State == EntityState.Unchanged)
@@ -105,5 +106,24 @@ public sealed class ChangeOrderRepository : IChangeOrderRepository
     public void Delete(ChangeOrderEntity order)
     {
         _context.ChangeOrders.Remove(order);
+    }
+
+    /// <summary>
+    /// Busca un registro de idempotencia por su Key
+    /// </summary>
+
+    public async Task<IdempotencyRecord?> GetIdempotencyRecordAsync(Guid key, CancellationToken ct)
+    {
+        return await _context.IdempotencyRecords
+            .FirstOrDefaultAsync(x => x.Key == key, ct);
+    }
+
+    /// <summary>
+    /// Agrega un nuevo registro de idempotencia sin guardar — lo maneja el UnitOfWork. 
+    /// </summary>
+
+    public async Task AddIdempotencyRecordAsync(IdempotencyRecord record, CancellationToken ct)
+    {
+        await _context.IdempotencyRecords.AddAsync(record, ct);
     }
 }
