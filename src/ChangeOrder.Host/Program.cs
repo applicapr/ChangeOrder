@@ -34,9 +34,29 @@ builder.Services.AddOpenApi(options =>
     });
 });
 
+// CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("InternalNetwork", policy =>
+    {
+        policy.WithOrigins("http://localhost:5151") // ajustar según las IPs internas reales
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
+// Response Compression
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
+
 WebApplication app = builder.Build();
 
 // Pipeline
+app.UseResponseCompression();
+app.UseCors("InternalNetwork");
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
