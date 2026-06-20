@@ -1,3 +1,4 @@
+using ChangeOrder.Host.BackgroundServices;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ChangeOrder.Host.Extensions;
@@ -8,11 +9,13 @@ namespace ChangeOrder.Host.Extensions;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Registra servicios adicionales específicos del Host.
+    /// Registra servicios adicionales específicos del Host, incluyendo los BackgroundServices.
     /// </summary>
     public static IServiceCollection AddHostServices(
         this IServiceCollection services)
     {
+        services.AddHostedService<IdempotencyCleanupService>();
+
         return services;
     }
 }
