@@ -52,4 +52,14 @@ public interface IChangeOrderRepository
     /// </summary>
     public void Delete(ChangeOrderEntity order);
 
+    /// <summary>
+    /// Busca un registro de idempotencia por su Key.
+    /// </summary>
+    public Task<IdempotencyRecord?> GetIdempotencyRecordAsync(Guid key, CancellationToken ct);
+
+    /// <summary>
+    /// Agrega un nuevo registro de idempotencia.
+    /// </summary>
+    public Task AddIdempotencyRecordAsync(IdempotencyRecord record, CancellationToken ct);
+
 }
