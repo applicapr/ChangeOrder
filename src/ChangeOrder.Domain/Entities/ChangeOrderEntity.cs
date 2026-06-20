@@ -68,7 +68,7 @@ public class ChangeOrderEntity : IAuditable, ISoftDeletable
     /// <summary>
     /// Cadena de aprobación en 4 niveles jerárquicos
     /// </summary>
-    public required ApprovalChain Approval { get; init; }
+    public required ApprovalChain Approval { get; set; }
 
     /// <summary>
     /// Estado del ciclo de vida de la orden
