@@ -1,4 +1,5 @@
 using ChangeOrder.Business.Abstractions;
+using ChangeOrder.Business.Validation;
 using ChangeOrder.Domain.Abstractions;
 using ChangeOrder.Domain.Entities;
 using ChangeOrder.Domain.Enums;
@@ -41,6 +42,10 @@ public sealed class CreateOrderHandler : ICommandHandler<CreateOrderCommand, Gui
     CreateOrderCommand command,
     CancellationToken ct)
     {
+        List<string> validationErrors = CreateOrderValidator.Validate(command);
+        if (validationErrors.Count > 0)
+            return Result<Guid, Error>.Failure(DomainErrors.Order.ValidationFailed);
+
         // 1. Generar OrderNumber
         OrderNumber number = await _generator.GenerateAsync(command.RequestDate, ct);
 

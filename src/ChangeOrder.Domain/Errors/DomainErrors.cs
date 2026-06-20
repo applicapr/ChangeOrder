@@ -19,5 +19,10 @@ public static class DomainErrors
         /// Ya existe una orden con ese número
         /// </summary>
         public static readonly Error AlreadyExists = new("Order.AlreadyExists", "Ya existe una orden con ese número.");
+
+        /// <summary>
+        /// Los datos de la orden no son válidos.
+        /// </summary>
+        public static readonly Error ValidationFailed = new("Order.ValidationFailed", "Los datos enviados no son válidos.");
     }
 }
