@@ -1,18 +1,19 @@
 using ChangeOrder.Business.Abstractions;
 using ChangeOrder.Business.Commands.CreateOrder;
 using ChangeOrder.Business.Commands.DeleteOrder;
+using ChangeOrder.Business.Commands.SetOrderDates;
 using ChangeOrder.Business.Commands.UpdateOrder;
 using ChangeOrder.Business.Queries.GetAllOrders;
 using ChangeOrder.Business.Queries.GetOrderById;
 using ChangeOrder.Business.Queries.GetOrdersByDate;
 using ChangeOrder.Domain.Entities;
+using ChangeOrder.Domain.Enums;
 using ChangeOrder.Domain.Errors;
 using ChangeOrder.Presentation.DTOs.Requests;
 using ChangeOrder.Presentation.Mappers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http; 
 using Microsoft.AspNetCore.Routing;
-using ChangeOrder.Domain.Enums;
 
 namespace ChangeOrder.Presentation.Endpoints;
 
@@ -143,6 +144,27 @@ public static class ChangeOrderEndpoints
 
             return Results.NoContent();
         }).WithName("DeleteOrder");
+
+        // PATCH fechas
+        group.MapPatch("{id:guid}/dates", async (
+            Guid id,
+            SetOrderDatesRequest request,
+            ICommandHandler<SetOrderDatesCommand, Guid> handler,
+            CancellationToken ct) =>
+        {
+            SetOrderDatesCommand command = new(
+                id,
+                request.DeliveryDate,
+                request.InitialEvaluationDate,
+                request.ProductionDeployDate);
+
+            Result<Guid, Error> result = await handler.HandleAsync(command, ct);
+
+            if (!result.IsSuccess)
+                return Results.NotFound(result.Error);
+
+            return Results.NoContent();
+        }).WithName("SetOrderDates");
 
         return app;
     }
