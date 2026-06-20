@@ -74,12 +74,28 @@ public sealed class ChangeOrderRepository : IChangeOrderRepository
     }
 
     /// <summary>
-    /// Marca la orden como modificada en el ChangeTracker de EF Core. 
+    /// Marca la orden como modificada en el ChangeTracker de EF Core.
     /// </summary>
 
     public void Update(ChangeOrderEntity order)
     {
         _context.ChangeOrders.Update(order);
+    }
+
+    /// <summary>
+    /// Sobrescribe el OriginalValue del rowVersion con el valor que el cliente afirma tener.
+    /// EF Core genera: WHERE Id = @id AND RowVersion = @clientRowVersion
+    /// Si la fila cambió en la BD desde que el cliente la leyó, se lanzan 0 filas afectadas
+    /// → DbUpdateConcurrencyException → ConcurrencyException del dominio.
+    /// </summary>
+
+    public void UpdateWithConcurrencyToken(ChangeOrderEntity order, byte[] clientRowVersion)
+    {
+        var entry = _context.Entry(order);
+        entry.Property(x => x.RowVersion).OriginalValue = clientRowVersion;
+
+        if (entry.State == EntityState.Unchanged)
+            entry.State = EntityState.Modified;
     }
 
     /// <summary>

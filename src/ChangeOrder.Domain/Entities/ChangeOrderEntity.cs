@@ -10,6 +10,14 @@ namespace ChangeOrder.Domain.Entities;
 /// </summary>
 public class ChangeOrderEntity : IAuditable, ISoftDeletable
 {
+
+
+    /// <summary>
+    /// Token de concurrencia optimista. SQL Server lo actualiza automáticamente
+    /// en cada UPDATE/INSERT para detectar conflictos de edición simultánea
+    /// </summary>
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
     /// <summary>
     /// Identificador único de la orden generado en la aplicación
     /// </summary>

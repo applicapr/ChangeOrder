@@ -5,6 +5,7 @@ namespace ChangeOrder.Presentation.DTOs.Requests;
 /// </summary>
 
 public sealed record UpdateOrderRequest(
+
     Guid Id,
     string ProgramName,
     string ProductionVersion,
@@ -14,5 +15,7 @@ public sealed record UpdateOrderRequest(
     string Justification,
     string RequiredAction,
     DateTime? DeliveryDate,
-    string Status
-    );
+    string Status,
+    byte[] RowVersion
+
+);

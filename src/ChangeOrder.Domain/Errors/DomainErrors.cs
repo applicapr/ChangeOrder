@@ -24,5 +24,10 @@ public static class DomainErrors
         /// Los datos de la orden no son válidos.
         /// </summary>
         public static readonly Error ValidationFailed = new("Order.ValidationFailed", "Los datos enviados no son válidos.");
+
+        /// <summary>
+        /// La orden fue modificada por otro usuario. Vuelve a cargarla e intenta de nuevo.
+        /// </summary>
+        public static readonly Error ConcurrencyConflict = new("Order.ConcurrencyConflict", "La orden fue modificada por otro usuario.");
     }
 }

@@ -121,7 +121,8 @@ public static class ChangeOrderEndpoints
                 request.Justification,
                 request.RequiredAction,
                 request.DeliveryDate,
-                Enum.Parse<OrderStatus>(request.Status));
+                Enum.Parse<OrderStatus>(request.Status),
+                request.RowVersion);
 
             Result<Guid, Error> result = await handler.HandleAsync(command, ct);
 

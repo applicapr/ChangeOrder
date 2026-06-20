@@ -40,6 +40,14 @@ public interface IChangeOrderRepository
     public void Update(ChangeOrderEntity order);
 
     /// <summary>
+    /// Establece el OriginalValue del token de concurrencia en el ChangeTracker
+    /// con el rowVersion que el cliente afirma tener. EF Core usará ese valor
+    /// en la cláusula WHERE del UPDATE, de modo que si la fila ya cambió en la BD
+    /// se lanzará DbUpdateConcurrencyException → ConcurrencyException.
+    /// </summary>
+    public void UpdateWithConcurrencyToken(ChangeOrderEntity order, byte[] clientRowVersion);
+
+    /// <summary>
     /// Marca la orden para borrado — el AuditInterceptor lo convierte en soft-delete.
     /// </summary>
     public void Delete(ChangeOrderEntity order);
