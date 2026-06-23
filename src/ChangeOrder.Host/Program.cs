@@ -22,6 +22,9 @@ builder.Services.AddBusinessServices();
 builder.Services.AddPresentationServices();
 builder.Services.AddHostServices();
 
+// ProblemDetails (RFC 7807)
+builder.Services.AddProblemDetails();
+
 // Health Checks
 builder.Services.AddHealthChecks()
     .AddSqlServer(connectionString, name: "sqlserver");

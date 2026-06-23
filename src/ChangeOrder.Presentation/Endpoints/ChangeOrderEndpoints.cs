@@ -11,26 +11,24 @@ using ChangeOrder.Domain.Entities;
 using ChangeOrder.Domain.Enums;
 using ChangeOrder.Domain.Errors;
 using ChangeOrder.Presentation.DTOs.Requests;
+using ChangeOrder.Presentation.Extensions;
 using ChangeOrder.Presentation.Mappers;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http; 
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 
 namespace ChangeOrder.Presentation.Endpoints;
 
 /// <summary>
-/// Endpoints Minimal API para la gestión de órdenes de cambio
+/// Endpoints Minimal API para la gestión de órdenes de cambio.
 /// </summary>
-
-
 public static class ChangeOrderEndpoints
 {
     /// <summary>
-    /// Registra todos los endpoints de órdenes de cambio bajo /api/v1/change-orders
+    /// Registra todos los endpoints de órdenes de cambio bajo /api/v1/change-orders.
     /// </summary>
-
     public static IEndpointRouteBuilder MapChangeOrderEndpoints(
-    this IEndpointRouteBuilder app)
+        this IEndpointRouteBuilder app)
     {
         RouteGroupBuilder group = app.MapGroup("/api/v1/change-orders")
             .WithTags("ChangeOrders");
@@ -38,6 +36,7 @@ public static class ChangeOrderEndpoints
         // GET por Id
         group.MapGet("{id:guid}", async (
             Guid id,
+            HttpContext httpContext,
             IQueryHandler<GetOrderByIdQuery, ChangeOrderEntity> handler,
             CancellationToken ct) =>
         {
@@ -45,7 +44,7 @@ public static class ChangeOrderEndpoints
                 await handler.HandleAsync(new GetOrderByIdQuery(id), ct);
 
             if (!result.IsSuccess)
-                return Results.NotFound(result.Error);
+                return result.Error!.ToProblemDetails(httpContext);
 
             return Results.Ok(OrderMapper.ToResponse(result.Value!));
         }).WithName("GetOrderById");
@@ -77,6 +76,7 @@ public static class ChangeOrderEndpoints
 
         // POST crear
         group.MapPost("", async (
+            HttpContext httpContext,
             CreateOrderRequest request,
             ICommandHandler<CreateOrderCommand, Guid> handler,
             CancellationToken ct) =>
@@ -99,7 +99,7 @@ public static class ChangeOrderEndpoints
             Result<Guid, Error> result = await handler.HandleAsync(command, ct);
 
             if (!result.IsSuccess)
-                return Results.BadRequest(result.Error);
+                return result.Error!.ToProblemDetails(httpContext);
 
             return Results.Created($"/api/v1/change-orders/{result.Value}", result.Value);
         }).WithName("CreateOrder");
@@ -107,6 +107,7 @@ public static class ChangeOrderEndpoints
         // PUT actualizar
         group.MapPut("{id:guid}", async (
             Guid id,
+            HttpContext httpContext,
             UpdateOrderRequest request,
             ICommandHandler<UpdateOrderCommand, Guid> handler,
             CancellationToken ct) =>
@@ -127,7 +128,7 @@ public static class ChangeOrderEndpoints
             Result<Guid, Error> result = await handler.HandleAsync(command, ct);
 
             if (!result.IsSuccess)
-                return Results.NotFound(result.Error);
+                return result.Error!.ToProblemDetails(httpContext);
 
             return Results.NoContent();
         }).WithName("UpdateOrder");
@@ -135,6 +136,7 @@ public static class ChangeOrderEndpoints
         // DELETE
         group.MapDelete("{id:guid}", async (
             Guid id,
+            HttpContext httpContext,
             ICommandHandler<DeleteOrderCommand, Guid> handler,
             CancellationToken ct) =>
         {
@@ -142,7 +144,7 @@ public static class ChangeOrderEndpoints
                 await handler.HandleAsync(new DeleteOrderCommand(id), ct);
 
             if (!result.IsSuccess)
-                return Results.NotFound(result.Error);
+                return result.Error!.ToProblemDetails(httpContext);
 
             return Results.NoContent();
         }).WithName("DeleteOrder");
@@ -150,6 +152,7 @@ public static class ChangeOrderEndpoints
         // PATCH fechas
         group.MapPatch("{id:guid}/dates", async (
             Guid id,
+            HttpContext httpContext,
             SetOrderDatesRequest request,
             ICommandHandler<SetOrderDatesCommand, Guid> handler,
             CancellationToken ct) =>
@@ -163,7 +166,7 @@ public static class ChangeOrderEndpoints
             Result<Guid, Error> result = await handler.HandleAsync(command, ct);
 
             if (!result.IsSuccess)
-                return Results.NotFound(result.Error);
+                return result.Error!.ToProblemDetails(httpContext);
 
             return Results.NoContent();
         }).WithName("SetOrderDates");
@@ -172,6 +175,7 @@ public static class ChangeOrderEndpoints
         group.MapPut("{id:guid}/approvals/{level}", async (
             Guid id,
             string level,
+            HttpContext httpContext,
             SetApprovalRequest request,
             ICommandHandler<SetApprovalCommand, Guid> handler,
             CancellationToken ct) =>
@@ -181,7 +185,7 @@ public static class ChangeOrderEndpoints
             Result<Guid, Error> result = await handler.HandleAsync(command, ct);
 
             if (!result.IsSuccess)
-                return Results.NotFound(result.Error);
+                return result.Error!.ToProblemDetails(httpContext);
 
             return Results.NoContent();
         }).WithName("SetApproval");
