@@ -6,4 +6,10 @@
     <Project Path="src/ChangeOrder.Host/ChangeOrder.Host.csproj" />
     <Project Path="src/ChangeOrder.Presentation/ChangeOrder.Presentation.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ChangeOrder.Business.Tests/ChangeOrder.Business.Tests.csproj" />
+    <Project Path="tests/ChangeOrder.Data.Tests/ChangeOrder.Data.Tests.csproj" />
+    <Project Path="tests/ChangeOrder.Domain.Tests/ChangeOrder.Domain.Tests.csproj" />
+    <Project Path="tests/ChangeOrder.Presentation.Tests/ChangeOrder.Presentation.Tests.csproj" />
+  </Folder>
 </Solution>
