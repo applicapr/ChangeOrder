@@ -99,7 +99,7 @@ public static class ChangeOrderEndpoints
             Result<Guid, Error> result = await handler.HandleAsync(command, ct);
 
             if (!result.IsSuccess)
-                return Results.BadRequest(result.Error);
+                return Results.UnprocessableEntity(result.Error);
 
             return Results.Created($"/api/v1/change-orders/{result.Value}", result.Value);
         }).WithName("CreateOrder");

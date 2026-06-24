@@ -109,3 +109,6 @@ app.MapGet("/version", () =>
 });
 
 app.Run();
+
+/// <summary>Expone Program al ensamblado de tests de integración.</summary>
+public partial class Program { }
