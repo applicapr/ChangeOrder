@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.2](https://github.com/applicapr/ChangeOrder/compare/changeorder-api-v1.1.1...changeorder-api-v1.1.2) (2026-07-06)
+
+
+### Bug Fixes
+
+* downgrade Microsoft.OpenApi override to 2.7.5 to fix build failure ([0d4cd89](https://github.com/applicapr/ChangeOrder/commit/0d4cd8901695d2a9cd6544492e23eb7055873bd9))
+* use Microsoft.OpenApi 2.7.5 to resolve build breakage from incompatible 3.x override ([42e8df7](https://github.com/applicapr/ChangeOrder/commit/42e8df7038cf4110c02ad425ff1ea070e565c136))
+
 ## [1.1.1](https://github.com/applicapr/ChangeOrder/compare/changeorder-api-v1.1.0...changeorder-api-v1.1.1) (2026-07-06)
 
 

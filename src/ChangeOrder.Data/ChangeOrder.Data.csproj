@@ -12,7 +12,7 @@
 
     <!-- Version: bumped by release-please on each release.
          FileVersion: updated post-release with the build date (yyyy.M.d.0). -->
-    <Version>1.1.1</Version>
+    <Version>1.1.2</Version>
     <FileVersion>2026.7.6.0</FileVersion>
   </PropertyGroup>
 
