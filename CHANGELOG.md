@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/applicapr/ChangeOrder/compare/changeorder-api-v1.1.0...changeorder-api-v1.1.1) (2026-07-06)
+
+
+### Bug Fixes
+
+* bump Microsoft.OpenApi to 2.7.5 to patch GHSA-v5pm-xwqc-g5wc ([456e606](https://github.com/applicapr/ChangeOrder/commit/456e606d82e7da8101829b41af451b745fbbe3e6))
+
 ## [1.1.0](https://github.com/applicapr/ChangeOrder/compare/changeorder-api-v1.0.0...changeorder-api-v1.1.0) (2026-05-14)
 
 
