@@ -75,3 +75,8 @@ logs/
 
 # AGENTS
 AGENTS.md
+CLAUDE.md
+
+.engram/
+.DS_Store
+
