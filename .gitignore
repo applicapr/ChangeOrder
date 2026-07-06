@@ -53,6 +53,11 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 
+# JetBrains Rider / IntelliJ-based IDEs
+.idea/
+*.sln.iml
+*.sln.DotSettings.user
+
 # Visual Studio
 .vs/
 *.user
@@ -60,7 +65,7 @@ nunit-*.xml
 *.userosscache
 *.sln.docstates
 
-# appsettings locales 
+# appsettings locales
 appsettings.Development.json
 appsettings.Local.json
 
