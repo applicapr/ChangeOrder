@@ -72,3 +72,6 @@ appsettings.Local.json
 # Logs de Serilog
 logs/
 *.txt
+
+# AGENTS
+AGENTS.md
