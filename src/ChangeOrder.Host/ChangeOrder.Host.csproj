@@ -16,7 +16,7 @@
     <!-- Version: bumped by release-please on each release.
          FileVersion: updated post-release with the build date (yyyy.M.d.0). -->
     <Version>1.1.2</Version>
-    <FileVersion>2026.7.6.0</FileVersion>
+    <FileVersion>2026.7.7.0</FileVersion>
 
     <!-- R-8: required for Microsoft.AspNetCore.OpenApi source-generated interceptors. -->
     <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
