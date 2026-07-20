@@ -48,7 +48,7 @@
     <PackageReference Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0"/>
 
     <!-- Scalar interactive OpenAPI UI (replaces Swashbuckle/Swagger UI) -->
-    <PackageReference Include="Scalar.AspNetCore" Version="2.16.10"/>
+    <PackageReference Include="Scalar.AspNetCore" Version="2.16.15"/>
 
     <!-- EF Core Design — required so `dotnet ef migrations` can run against the Host as startup project. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
