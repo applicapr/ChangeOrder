@@ -51,7 +51,7 @@
     <PackageReference Include="Scalar.AspNetCore" Version="2.16.16"/>
 
     <!-- EF Core Design — required so `dotnet ef migrations` can run against the Host as startup project. -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
